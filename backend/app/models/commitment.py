@@ -50,6 +50,7 @@ class Commitment(Base):
         server_default=text("now()"),
     )
     resolved_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    onchain_tx_hash: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Relationships
     author = relationship("User", back_populates="commitments", lazy="selectin")

@@ -255,6 +255,23 @@ export default function ProfilePage({
       >
         View Partners & Jurors ({profile.stats.partner_count})
       </Link>
+
+      {/* Web3 Export Section */}
+      <div style={{ marginTop: "32px", padding: "16px", background: "var(--bg-surface)", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
+        <h3 style={{ fontSize: "var(--font-body)", fontWeight: 600, marginBottom: "8px" }}>Web3 Reputation</h3>
+        <p style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)", marginBottom: "16px" }}>
+          Connect your wallet to export your reputation score as an immutable EAS attestation on Polygon.
+        </p>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <button 
+            className="btn btn-primary" 
+            onClick={() => alert("EAS Attestation creation triggered! (Mock implementation)")}
+            style={{ flex: 1 }}
+          >
+            Mint Attestation
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

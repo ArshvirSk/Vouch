@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { AuthProvider } from "@/lib/auth-context";
+import { Web3Providers } from "@/components/Providers";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -20,10 +21,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
       <body className="min-h-full flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
-        <AuthProvider>
-          <Navbar />
-          <main style={{ flex: 1 }}>{children}</main>
-        </AuthProvider>
+        <Web3Providers>
+          <AuthProvider>
+            <Navbar />
+            <main style={{ flex: 1 }}>{children}</main>
+          </AuthProvider>
+        </Web3Providers>
       </body>
     </html>
   );

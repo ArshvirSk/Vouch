@@ -118,6 +118,21 @@ export function CommitmentCard({ commitment }: CommitmentCardProps) {
           </div>
         </div>
       </div>
+
+      {commitment.onchain_tx_hash && (
+        <div className="bg-indigo-50 px-4 py-2 text-xs text-indigo-700 flex justify-between border-t border-indigo-100">
+          <span className="font-medium">Anchored on Polygon</span>
+          <a
+            href={`https://amoy.polygonscan.com/tx/${commitment.onchain_tx_hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Verify Tx
+          </a>
+        </div>
+      )}
     </Link>
   );
 }
