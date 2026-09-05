@@ -1,0 +1,506 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────
+   Vouch Design System — Design Doc §3
+   ───────────────────────────────────────────── */
+
+:root {
+  /* Background */
+  --bg-primary: #0E0F14;
+  --bg-surface: #1A1C24;
+  --bg-surface-raised: #22242E;
+
+  /* Accent */
+  --accent-primary: #FF6B35;
+  --accent-verified: #3DDC97;
+  --accent-broken: #FF4D6A;
+  --accent-disputed: #9B7EDE;
+
+  /* Text */
+  --text-primary: #F5F5F7;
+  --text-secondary: #9A9CAB;
+
+  /* Border */
+  --border-subtle: #2E3140;
+
+  /* Typography scale — Design Doc §4 */
+  --font-display: 32px;
+  --font-title: 24px;
+  --font-subtitle: 18px;
+  --font-body: 15px;
+  --font-caption: 13px;
+}
+
+/* Base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: var(--font-body);
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* ─────────────────────────────────────────────
+   Component base styles
+   ───────────────────────────────────────────── */
+
+/* Cards */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 20px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.card:hover {
+  border-color: rgba(255, 107, 53, 0.3);
+  transform: translateY(-1px);
+}
+
+.card-raised {
+  background: var(--bg-surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  outline: none;
+}
+
+.btn-primary {
+  background: var(--accent-primary);
+  color: white;
+}
+.btn-primary:hover {
+  background: #e85e2d;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+}
+
+.btn-met {
+  background: var(--accent-verified);
+  color: #0E0F14;
+  min-height: 56px;
+  font-size: var(--font-subtitle);
+}
+.btn-met:hover {
+  background: #35c887;
+  box-shadow: 0 4px 16px rgba(61, 220, 151, 0.3);
+}
+
+.btn-broken {
+  background: var(--accent-broken);
+  color: white;
+  min-height: 56px;
+  font-size: var(--font-subtitle);
+}
+.btn-broken:hover {
+  background: #e8445f;
+  box-shadow: 0 4px 16px rgba(255, 77, 106, 0.3);
+}
+
+.btn-abstain {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 2px solid var(--border-subtle);
+  min-height: 56px;
+  font-size: var(--font-subtitle);
+}
+.btn-abstain:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+.btn-outline:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* Category pills — Design Doc §6 */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 100px;
+  font-size: var(--font-caption);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+}
+.pill.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+.pill:hover:not(.active) {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* Verdict badges — Design Doc §6 */
+.verdict-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: var(--font-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.verdict-badge.met {
+  background: rgba(61, 220, 151, 0.15);
+  color: var(--accent-verified);
+}
+.verdict-badge.broken {
+  background: rgba(255, 77, 106, 0.15);
+  color: var(--accent-broken);
+}
+.verdict-badge.disputed {
+  background: rgba(155, 126, 222, 0.15);
+  color: var(--accent-disputed);
+}
+.verdict-badge.open {
+  background: rgba(255, 107, 53, 0.15);
+  color: var(--accent-primary);
+}
+.verdict-badge.in_verification {
+  background: rgba(154, 156, 171, 0.15);
+  color: var(--text-secondary);
+}
+
+/* Progress bar (time-based) — Design Doc §6 */
+.progress-bar {
+  height: 4px;
+  background: var(--border-subtle);
+  border-radius: 2px;
+  overflow: hidden;
+  width: 100%;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.progress-bar-fill.on-track {
+  background: var(--accent-primary);
+}
+.progress-bar-fill.warning {
+  background: var(--accent-broken);
+}
+
+/* Stats row — Design Doc §5.5 (from Ref B profile pattern) */
+.stats-row {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  padding: 24px 0;
+}
+.stat-item {
+  text-align: center;
+}
+.stat-value {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.stat-label {
+  font-size: var(--font-caption);
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* Evidence timeline — Design Doc §5.3 */
+.timeline {
+  position: relative;
+  padding-left: 24px;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border-subtle);
+}
+.timeline-item {
+  position: relative;
+  padding-bottom: 24px;
+}
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -28px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-primary);
+}
+
+/* Reputation gauge — Design Doc §5.5 (from Ref A efficiency dial) */
+.gauge-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+.gauge-bg {
+  fill: none;
+  stroke: var(--border-subtle);
+  stroke-width: 8;
+}
+.gauge-fill {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+/* Waveform trend bars — Design Doc §5.5 */
+.waveform {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 60px;
+}
+.waveform-bar {
+  width: 8px;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease;
+  min-height: 4px;
+}
+.waveform-bar.met {
+  background: var(--accent-verified);
+}
+.waveform-bar.broken {
+  background: var(--accent-broken);
+}
+.waveform-bar.disputed {
+  background: var(--accent-disputed);
+}
+
+/* Stacked jury avatars */
+.avatar-stack {
+  display: flex;
+}
+.avatar-stack .avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-surface-raised);
+  border: 2px solid var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-left: -8px;
+}
+.avatar-stack .avatar:first-child {
+  margin-left: 0;
+}
+
+/* Navigation */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* Status strip tabs — Design Doc §5.1 */
+.status-strip {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-surface);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+.status-tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: var(--font-caption);
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  background: transparent;
+  border: none;
+}
+.status-tab.active {
+  background: var(--accent-primary);
+  color: white;
+}
+.status-tab:hover:not(.active) {
+  color: var(--text-primary);
+  background: var(--bg-surface-raised);
+}
+
+/* Form inputs — step-by-step form (Design Doc §5.2) */
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: var(--font-body);
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+  outline: none;
+}
+.input:focus {
+  border-color: var(--accent-primary);
+}
+.input::placeholder {
+  color: var(--text-secondary);
+}
+
+textarea.input {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Warning chip — Design Doc §5.2 falsifiability nudge */
+.warning-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 107, 53, 0.1);
+  border: 1px solid rgba(255, 107, 53, 0.2);
+  border-radius: 10px;
+  font-size: var(--font-caption);
+  color: var(--accent-primary);
+}
+
+/* AI summary label — Design Doc §5.4 */
+.ai-summary {
+  border: 1px dashed var(--border-subtle);
+  border-radius: 12px;
+  padding: 16px;
+  position: relative;
+}
+.ai-summary-label {
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  background: var(--bg-primary);
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Animations — Design Doc §7 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatDelta {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes verdictReveal {
+  0% { background-color: rgba(154, 156, 171, 0.15); }
+  100% { background-color: inherit; }
+}
+
+.animate-in {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.delta-float {
+  animation: floatDelta 1.5s ease-out forwards;
+  position: absolute;
+  font-weight: 600;
+  font-size: var(--font-caption);
+}
+.delta-float.positive {
+  color: var(--accent-verified);
+}
+.delta-float.negative {
+  color: var(--accent-broken);
+}
+
+/* Responsive container */
+.container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 16px;
+}

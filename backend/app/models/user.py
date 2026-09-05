@@ -1,0 +1,32 @@
+import uuid
+from datetime import datetime, timezone
+from sqlalchemy import String, Numeric, text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.database import Base
+
+
+class User(Base):
+    """Users table — TRD §3."""
+
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True,
+        default=uuid.uuid4,
+        server_default=text("gen_random_uuid()"),
+    )
+    handle: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    # Hashed password for MVP mock auth
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    reputation_score: Mapped[float] = mapped_column(
+        Numeric(5, 2), default=0, server_default=text("0")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc),
+        server_default=text("now()"),
+    )
+
+    # Relationships
+    commitments = relationship("Commitment", back_populates="author", lazy="selectin")
+    reputation_events = relationship("ReputationEvent", back_populates="user", lazy="selectin")
