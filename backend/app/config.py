@@ -4,8 +4,8 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # Database
-    database_url: str = "postgresql+asyncpg://vouch:vouch_dev_password@localhost:5432/vouch"
-    database_url_sync: str = "postgresql://vouch:vouch_dev_password@localhost:5432/vouch"
+    database_url: str = "sqlite+aiosqlite:///./test.db"
+    database_url_sync: str = "sqlite:///./test.db"
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"

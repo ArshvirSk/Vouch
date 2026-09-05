@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, commitments, evidence, votes, users
+from app.routers import auth, commitments, evidence, votes, users, admin
 
 app = FastAPI(
     title="Vouch API",
@@ -24,6 +24,7 @@ app.include_router(commitments.router)
 app.include_router(evidence.router)
 app.include_router(votes.router)
 app.include_router(users.router)
+app.include_router(admin.router)
 
 
 @app.get("/health")
