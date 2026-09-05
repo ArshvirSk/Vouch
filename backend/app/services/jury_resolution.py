@@ -88,6 +88,17 @@ async def resolve_commitment(
             reason=author_reason,
             commitment_id=commitment_id,
         ))
+        
+        # Streak logic
+        from app.models.user import User
+        author = await db.get(User, commitment.author_id)
+        if author:
+            if verdict == CommitmentStatus.MET:
+                author.current_streak += 1
+                if author.current_streak > author.longest_streak:
+                    author.longest_streak = author.current_streak
+            else:
+                author.current_streak = 0
 
         # Juror reputation — accurate if vote matches verdict, inaccurate otherwise
         # Abstaining jurors get no reputation event (auto-abstain decision)
@@ -105,6 +116,14 @@ async def resolve_commitment(
                 reason=ReputationReason.JURY_ACCURATE if is_accurate else ReputationReason.JURY_INACCURATE,
                 commitment_id=commitment_id,
             ))
+
+        # Notify author
+        from app.models.notification import Notification, NotificationType
+        db.add(Notification(
+            user_id=commitment.author_id,
+            type=NotificationType.RESOLUTION,
+            message=f"Your commitment '{commitment.title}' was resolved as {verdict.value} by the jury."
+        ))
 
     await db.commit()
     return verdict

@@ -116,6 +116,14 @@ async def create_commitment(
             commitment_id=commitment.id,
             juror_id=juror.id,
         ))
+        
+        # Create notification for juror
+        from app.models.notification import Notification, NotificationType
+        db.add(Notification(
+            user_id=juror.id,
+            type=NotificationType.INVITE,
+            message=f"You have been invited to be a juror for '{req.title}' by @{current_user.handle}."
+        ))
 
     await db.commit()
     await db.refresh(commitment)

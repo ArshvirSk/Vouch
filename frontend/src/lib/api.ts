@@ -160,6 +160,7 @@ export interface UserProfile {
     id: string;
     handle: string;
     reputation_score: number;
+    current_streak: number;
     created_at: string;
   };
   stats: {
@@ -189,4 +190,25 @@ export async function getReputationHistory(handle: string) {
   return apiFetch<{ events: ReputationEvent[]; current_score: number }>(
     `/users/${handle}/reputation-history`
   );
+}
+
+// ─── Notifications ────────────────────────────────
+
+export interface Notification {
+  id: string;
+  type: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export async function getUnreadNotifications(token: string) {
+  return apiFetch<Notification[]>("/notifications", { token });
+}
+
+export async function markNotificationAsRead(id: string, token: string) {
+  return apiFetch<{ status: string }>(`/notifications/${id}/read`, {
+    method: "POST",
+    token,
+  });
 }

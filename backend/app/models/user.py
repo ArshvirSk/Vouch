@@ -26,6 +26,8 @@ class User(Base):
         default=lambda: datetime.now(timezone.utc),
         server_default=text("now()"),
     )
+    current_streak: Mapped[int] = mapped_column(default=0, server_default=text("0"))
+    longest_streak: Mapped[int] = mapped_column(default=0, server_default=text("0"))
 
     # Relationships
     commitments = relationship("Commitment", back_populates="author", lazy="selectin")

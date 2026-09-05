@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { NotificationBell } from "./NotificationBell";
 
 export function Navbar() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -24,6 +25,7 @@ export function Navbar() {
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
         {isAuthenticated ? (
           <>
+            <NotificationBell />
             <Link
               href="/create"
               className="btn btn-primary"

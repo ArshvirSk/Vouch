@@ -107,14 +107,20 @@ export default function ProfilePage({
           <div className="stat-label">Reputation</div>
         </div>
         <div className="stat-item">
+          <div className="stat-value" style={{ color: "var(--accent-primary)" }}>
+            🔥 {profile.user.current_streak}
+          </div>
+          <div className="stat-label">Streak</div>
+        </div>
+        <div className="stat-item">
           <div className="stat-value">
             {profile.stats.commitments_met}/{profile.stats.commitments_total}
           </div>
-          <div className="stat-label">Commitments Kept</div>
+          <div className="stat-label">Kept</div>
         </div>
         <div className="stat-item">
           <div className="stat-value">{profile.stats.jury_accuracy.toFixed(0)}%</div>
-          <div className="stat-label">Jury Accuracy</div>
+          <div className="stat-label">Accuracy</div>
         </div>
       </div>
 
@@ -258,6 +264,7 @@ function getDemoProfile(handle: string): UserProfile {
       id: "demo",
       handle,
       reputation_score: 72.5,
+      current_streak: 2,
       created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
     },
     stats: {
