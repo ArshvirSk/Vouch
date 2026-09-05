@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getUnreadNotifications, markNotificationAsRead, type Notification } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
+import { Bell } from "lucide-react";
 
 export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -57,9 +58,12 @@ export function NotificationBell() {
           cursor: "pointer",
           position: "relative",
           padding: "8px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        🔔
+        <Bell size={20} />
         {notifications.length > 0 && (
           <span
             style={{

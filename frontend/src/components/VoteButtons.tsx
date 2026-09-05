@@ -6,6 +6,8 @@
  * Deliberately oversized and unambiguous — highest-stakes tap in the app.
  */
 
+import { Check, X, Minus } from "lucide-react";
+
 interface VoteButtonsProps {
   onVote: (choice: "met" | "broken" | "abstain") => void;
   disabled?: boolean;
@@ -18,25 +20,25 @@ export function VoteButtons({ onVote, disabled }: VoteButtonsProps) {
         className="btn btn-met"
         onClick={() => onVote("met")}
         disabled={disabled}
-        style={{ width: "100%", opacity: disabled ? 0.5 : 1 }}
+        style={{ width: "100%", opacity: disabled ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
       >
-        ✓ Commitment Met
+        <Check size={20} /> Commitment Met
       </button>
       <button
         className="btn btn-broken"
         onClick={() => onVote("broken")}
         disabled={disabled}
-        style={{ width: "100%", opacity: disabled ? 0.5 : 1 }}
+        style={{ width: "100%", opacity: disabled ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
       >
-        ✗ Commitment Broken
+        <X size={20} /> Commitment Broken
       </button>
       <button
         className="btn btn-abstain"
         onClick={() => onVote("abstain")}
         disabled={disabled}
-        style={{ width: "100%", opacity: disabled ? 0.5 : 1 }}
+        style={{ width: "100%", opacity: disabled ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
       >
-        — Abstain
+        <Minus size={20} /> Abstain
       </button>
     </div>
   );

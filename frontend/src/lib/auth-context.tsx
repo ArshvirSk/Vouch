@@ -1,55 +1,74 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "./supabase";
 
 interface AuthUser {
+  id: string;
   handle: string;
   token: string;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
-  setAuth: (handle: string, token: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  setAuth: () => {},
   logout: () => {},
   isAuthenticated: false,
+  loading: true,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Restore from localStorage on mount
-    const stored = localStorage.getItem("vouch_auth");
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        localStorage.removeItem("vouch_auth");
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setUser({
+          id: session.user.id,
+          handle: session.user.user_metadata?.handle || "user",
+          token: session.access_token,
+        });
+        localStorage.setItem("vouch_token", session.access_token);
       }
-    }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session) {
+          setUser({
+            id: session.user.id,
+            handle: session.user.user_metadata?.handle || "user",
+            token: session.access_token,
+          });
+          localStorage.setItem("vouch_token", session.access_token);
+        } else {
+          setUser(null);
+          localStorage.removeItem("vouch_token");
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const setAuth = (handle: string, token: string) => {
-    const authUser = { handle, token };
-    setUser(authUser);
-    localStorage.setItem("vouch_auth", JSON.stringify(authUser));
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("vouch_auth");
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, setAuth, logout, isAuthenticated: !!user }}
+      value={{ user, logout, isAuthenticated: !!user, loading }}
     >
       {children}
     </AuthContext.Provider>

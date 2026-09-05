@@ -17,8 +17,9 @@ class User(Base):
     )
     handle: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    # Hashed password for MVP mock auth
-    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    # Hybrid Auth Fields
+    wallet_address: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
+    auth_provider: Mapped[str] = mapped_column(String, default="email", server_default=text("'email'"))
     reputation_score: Mapped[float] = mapped_column(
         Numeric(5, 2), default=0, server_default=text("0")
     )

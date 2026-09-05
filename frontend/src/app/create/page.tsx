@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { createCommitment } from "@/lib/api";
+import { AlertTriangle, X, ArrowLeft, ArrowRight } from "lucide-react";
 
 type Step = "title" | "condition" | "deadline" | "jurors" | "review";
 
@@ -163,8 +164,8 @@ export default function CreateCommitmentPage() {
           />
           {/* Falsifiability warning chip — Design Doc §5.2 */}
           {showFalsifiabilityWarning && (
-            <div className="warning-chip" style={{ marginTop: "12px" }}>
-              <span>⚠️</span>
+            <div className="warning-chip" style={{ marginTop: "12px", display: "flex", gap: "8px", alignItems: "flex-start" }}>
+              <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: "2px" }} />
               <span>
                 This might be hard to verify — try adding a number, deadline, or
                 measurable outcome.
@@ -273,9 +274,12 @@ export default function CreateCommitmentPage() {
                     color: "var(--accent-broken)",
                     cursor: "pointer",
                     fontSize: "18px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  ×
+                  <X size={18} />
                 </button>
               )}
             </div>
@@ -423,8 +427,9 @@ export default function CreateCommitmentPage() {
           <button
             className="btn btn-outline"
             onClick={() => setStep(steps[currentIdx - 1].key)}
+            style={{ display: "flex", alignItems: "center", gap: "6px" }}
           >
-            ← Back
+            <ArrowLeft size={16} /> Back
           </button>
         ) : (
           <div />
@@ -444,9 +449,9 @@ export default function CreateCommitmentPage() {
             className="btn btn-primary"
             onClick={() => setStep(steps[currentIdx + 1].key)}
             disabled={!canNext()}
-            style={{ opacity: canNext() ? 1 : 0.5 }}
+            style={{ opacity: canNext() ? 1 : 0.5, display: "flex", alignItems: "center", gap: "6px" }}
           >
-            Continue →
+            Continue <ArrowRight size={16} />
           </button>
         )}
       </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Commitment } from "@/lib/api";
 import { formatRelativeTime, calcTimeProgress, getStatusLabel, getInitials } from "@/lib/utils";
+import { Paperclip } from "lucide-react";
 
 interface CommitmentCardProps {
   commitment: Commitment;
@@ -106,9 +107,12 @@ export function CommitmentCard({ commitment }: CommitmentCardProps) {
                 style={{
                   fontSize: "var(--font-caption)",
                   color: "var(--accent-primary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px"
                 }}
               >
-                📎 {commitment.evidence_count}
+                <Paperclip size={14} /> {commitment.evidence_count}
               </span>
             )}
           </div>

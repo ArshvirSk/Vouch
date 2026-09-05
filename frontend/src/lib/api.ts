@@ -35,21 +35,7 @@ async function apiFetch<T>(endpoint: string, options: ApiOptions = {}): Promise<
   return res.json();
 }
 
-// ─── Auth ─────────────────────────────────────────
-
-export async function signup(handle: string, email: string, password: string) {
-  return apiFetch<{ access_token: string }>("/auth/signup", {
-    method: "POST",
-    body: { handle, email, password },
-  });
-}
-
-export async function login(email: string, password: string) {
-  return apiFetch<{ access_token: string }>("/auth/login", {
-    method: "POST",
-    body: { email, password },
-  });
-}
+// Auth logic is now handled natively via Supabase client
 
 // ─── Commitments ──────────────────────────────────
 

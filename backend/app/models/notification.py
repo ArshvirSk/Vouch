@@ -24,7 +24,7 @@ class Notification(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id"), nullable=False
     )
-    type: Mapped[NotificationType] = mapped_column(nullable=False)
+    type: Mapped[NotificationType] = mapped_column(Enum(NotificationType, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     message: Mapped[str] = mapped_column(String, nullable=False)
     is_read: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
     created_at: Mapped[datetime] = mapped_column(

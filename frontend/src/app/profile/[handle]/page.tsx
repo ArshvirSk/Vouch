@@ -11,6 +11,7 @@ import { ReputationGauge } from "@/components/ReputationGauge";
 import { WaveformBars } from "@/components/WaveformBars";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
+import { Flame } from "lucide-react";
 
 export default function ProfilePage({
   params,
@@ -107,8 +108,8 @@ export default function ProfilePage({
           <div className="stat-label">Reputation</div>
         </div>
         <div className="stat-item">
-          <div className="stat-value" style={{ color: "var(--accent-primary)" }}>
-            🔥 {profile.user.current_streak}
+          <div className="stat-value" style={{ color: "var(--accent-primary)", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
+            <Flame size={20} /> {profile.user.current_streak}
           </div>
           <div className="stat-label">Streak</div>
         </div>

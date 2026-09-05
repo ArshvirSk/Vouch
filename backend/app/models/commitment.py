@@ -1,7 +1,7 @@
 import uuid
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import String, ForeignKey, Index, text
+from sqlalchemy import String, ForeignKey, Index, text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -39,6 +39,7 @@ class Commitment(Base):
     measurable_condition: Mapped[str] = mapped_column(String, nullable=False)
     deadline: Mapped[datetime] = mapped_column(nullable=False)
     status: Mapped[CommitmentStatus] = mapped_column(
+        Enum(CommitmentStatus, values_callable=lambda obj: [e.value for e in obj]),
         default=CommitmentStatus.OPEN,
         server_default=text("'open'"),
     )

@@ -12,6 +12,7 @@ import { formatRelativeTime, formatDate, getStatusLabel, calcTimeProgress } from
 import { VoteButtons } from "@/components/VoteButtons";
 import { castVote } from "@/lib/api";
 import Link from "next/link";
+import { ArrowLeft, Check, X, Scale, ChevronDown, ChevronRight, Paperclip } from "lucide-react";
 
 export default function CommitmentDetailPage({
   params,
@@ -135,11 +136,13 @@ export default function CommitmentDetailPage({
           color: "var(--text-secondary)",
           textDecoration: "none",
           fontSize: "var(--font-caption)",
-          display: "inline-block",
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
           marginBottom: "20px",
         }}
       >
-        ← Back to Feed
+        <ArrowLeft size={16} /> Back to Feed
       </Link>
 
       {/* Hero area — Design Doc §5.3 */}
@@ -165,9 +168,12 @@ export default function CommitmentDetailPage({
             className={`verdict-badge ${commitment.status}`}
             style={{
               animation: isResolved ? "verdictReveal 0.4s ease" : undefined,
+              display: "flex",
+              alignItems: "center",
+              gap: "4px"
             }}
           >
-            {isResolved ? (commitment.status === "met" ? "✓ " : commitment.status === "broken" ? "✗ " : "⚖ ") : ""}
+            {isResolved ? (commitment.status === "met" ? <Check size={16} /> : commitment.status === "broken" ? <X size={16} /> : <Scale size={16} />) : ""}
             {getStatusLabel(commitment.status)}
           </span>
         </div>
@@ -282,9 +288,12 @@ export default function CommitmentDetailPage({
                 color: "var(--text-secondary)",
                 cursor: "pointer",
                 fontSize: "var(--font-caption)",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px"
               }}
             >
-              {showVoting ? "▼ Hide reason" : "▶ Add reason (optional)"}
+              {showVoting ? <><ChevronDown size={14} /> Hide reason</> : <><ChevronRight size={14} /> Add reason (optional)</>}
             </button>
             {showVoting && (
               <textarea
@@ -314,9 +323,13 @@ export default function CommitmentDetailPage({
               fontSize: "var(--font-subtitle)",
               color: "var(--accent-verified)",
               marginBottom: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px"
             }}
           >
-            ✓ Vote Recorded
+            <Check size={20} /> Vote Recorded
           </div>
           <p style={{ color: "var(--text-secondary)" }}>
             Waiting on other jurors. Results will be revealed after all votes are
@@ -452,9 +465,9 @@ export default function CommitmentDetailPage({
             <button
               className="btn btn-primary"
               onClick={() => setShowEvidenceForm(true)}
-              style={{ width: "100%" }}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
             >
-              📎 Send Evidence
+              <Paperclip size={18} /> Send Evidence
             </button>
           )}
         </div>

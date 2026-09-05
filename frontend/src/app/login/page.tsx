@@ -6,12 +6,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
-import { login, signup } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setAuth } = useAuth();
   const [isSignup, setIsSignup] = useState(false);
   const [handle, setHandle] = useState("");
   const [email, setEmail] = useState("");
@@ -26,13 +24,26 @@ export default function LoginPage() {
 
     try {
       if (isSignup) {
-        const result = await signup(handle, email, password);
-        setAuth(handle, result.access_token);
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { handle },
+          },
+        });
+        if (signUpError) throw signUpError;
+        
+        if (data.user && !data.session) {
+          setError("Check your email for the confirmation link to continue.");
+          setLoading(false);
+          return;
+        }
       } else {
-        const result = await login(email, password);
-        // Extract handle from JWT payload
-        const payload = JSON.parse(atob(result.access_token.split(".")[1]));
-        setAuth(payload.handle, result.access_token);
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
       }
       router.push("/");
     } catch (err) {

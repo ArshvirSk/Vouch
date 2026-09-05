@@ -8,6 +8,7 @@
 import { use } from "react";
 import Link from "next/link";
 import { getInitials } from "@/lib/utils";
+import { ArrowLeft } from "lucide-react";
 
 interface Partner {
   handle: string;
@@ -42,11 +43,13 @@ export default function PartnersPage({
           color: "var(--text-secondary)",
           textDecoration: "none",
           fontSize: "var(--font-caption)",
-          display: "inline-block",
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
           marginBottom: "20px",
         }}
       >
-        ← Back to Profile
+        <ArrowLeft size={16} /> Back to Profile
       </Link>
 
       <h1

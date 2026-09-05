@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, commitments, evidence, votes, users, admin, notifications
+from app.routers import commitments, evidence, votes, users, admin, notifications
 
 app = FastAPI(
     title="Vouch API",
@@ -18,8 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register routers — TRD §5
-app.include_router(auth.router)
+# Register routers
 app.include_router(commitments.router)
 app.include_router(evidence.router)
 app.include_router(votes.router)

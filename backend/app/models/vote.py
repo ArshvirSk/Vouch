@@ -1,7 +1,7 @@
 import uuid
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import String, ForeignKey, Index, text
+from sqlalchemy import String, ForeignKey, Index, text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -33,7 +33,7 @@ class Vote(Base):
     juror_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id"), nullable=False
     )
-    vote: Mapped[VoteChoice] = mapped_column(nullable=False)
+    vote: Mapped[VoteChoice] = mapped_column(Enum(VoteChoice, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     reason: Mapped[str | None] = mapped_column(String, nullable=True)
     voted_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(timezone.utc),

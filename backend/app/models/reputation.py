@@ -1,7 +1,7 @@
 import uuid
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import Numeric, ForeignKey, Index, text
+from sqlalchemy import Numeric, ForeignKey, Index, text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -33,7 +33,7 @@ class ReputationEvent(Base):
         ForeignKey("users.id"), nullable=False
     )
     delta: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
-    reason: Mapped[ReputationReason] = mapped_column(nullable=False)
+    reason: Mapped[ReputationReason] = mapped_column(Enum(ReputationReason, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     commitment_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("commitments.id"), nullable=True
     )
