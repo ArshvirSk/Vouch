@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
+import { AppShell } from "@/components/AppShell";
 import { AuthProvider } from "@/lib/auth-context";
 import { Web3Providers } from "@/components/Providers";
 
@@ -23,8 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
         <Web3Providers>
           <AuthProvider>
-            <Navbar />
-            <main style={{ flex: 1 }}>{children}</main>
+            <AppShell>{children}</AppShell>
           </AuthProvider>
         </Web3Providers>
       </body>
