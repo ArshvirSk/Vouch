@@ -93,6 +93,12 @@ export async function createCommitment(
     measurable_condition: string;
     deadline: string;
     juror_handles: string[];
+    category?: "personal" | "civic" | "vendor";
+    official_name?: string;
+    official_role?: string;
+    ward?: string;
+    source_type?: "crowd" | "sourced";
+    source_citation?: string;
   },
   token: string
 ) {

@@ -5,8 +5,8 @@
  * Conversational, step-by-step form with falsifiability check inline warning.
  */
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { createCommitment, searchUsers } from "@/lib/api";
 import { AlertTriangle, X, ArrowLeft, ArrowRight } from "lucide-react";
@@ -14,8 +14,23 @@ import { AlertTriangle, X, ArrowLeft, ArrowRight } from "lucide-react";
 type Step = "title" | "condition" | "deadline" | "jurors" | "review";
 
 export default function CreateCommitmentPage() {
+  return (
+    <Suspense fallback={<div className="container" style={{ paddingTop: "40px" }} /> }>
+      <CreateCommitmentInner />
+    </Suspense>
+  );
+}
+
+function CreateCommitmentInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
+  // Pre-selected via Quick Create links (?type=civic|vendor); full type
+  // selector step arrives with the India create-flow stage.
+  const paramType = searchParams.get("type");
+  const [category] = useState<"personal" | "civic" | "vendor">(
+    paramType === "civic" || paramType === "vendor" ? paramType : "personal"
+  );
   const [step, setStep] = useState<Step>("title");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -101,6 +116,7 @@ export default function CreateCommitmentPage() {
           measurable_condition: condition,
           deadline: new Date(deadline).toISOString(),
           juror_handles: jurorHandles.filter((h) => h.trim()),
+          category,
         },
         user.token
       );

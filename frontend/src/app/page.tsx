@@ -11,6 +11,7 @@ import { type Commitment } from "@/lib/api";
 import { CommitmentFeedCard } from "@/components/CommitmentFeedCard";
 import { getDemoCommitments } from "@/components/CommitmentListPage";
 import { HeroBanner } from "@/components/HeroBanner";
+import { HomeRightRail } from "@/components/HomeRightRail";
 
 /**
  * Filter row per the reference: "All" is a filled pill; the rest are text
@@ -72,7 +73,9 @@ export default function HomePage() {
   }, [activeFilter]);
 
   return (
-    <div className="shell-content" style={{ maxWidth: "860px" }}>
+    <div style={{ display: "flex", alignItems: "flex-start" }}>
+      {/* Main column */}
+      <div className="shell-content" style={{ maxWidth: "860px" }}>
       <HeroBanner />
 
       {/* Recent Commitments header */}
@@ -161,6 +164,10 @@ export default function HomePage() {
       ) : (
         commitments.map((c) => <CommitmentFeedCard key={c.id} commitment={c} />)
       )}
+      </div>
+
+      {/* Right rail — Quick Create / Your Impact / Active in Your Area */}
+      <HomeRightRail />
     </div>
   );
 }
