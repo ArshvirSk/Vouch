@@ -14,6 +14,7 @@ from app.jobs.reputation_recompute import run_reputation_recompute
 from app.tasks.anchor import anchor_pending_commitments
 from app.tasks.jury_selection import select_public_juries
 from app.tasks.anchor_reputation import anchor_reputations
+from app.services.milestone_service import check_milestones
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -55,4 +56,5 @@ async def run_phase3_jobs():
       backend-signed attestations to the VouchReputation contract.
     """
     result = await anchor_reputations()
-    return {"status": "ok", **result}
+    milestone_result = await check_milestones()
+    return {"status": "ok", "reputation_anchoring": result, "milestone_check": milestone_result}

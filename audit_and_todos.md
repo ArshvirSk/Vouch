@@ -15,8 +15,8 @@ Based on the Product Requirements Document (PRD), the platform is currently at P
 - [x] **Contradiction Detection:** AI-assisted flagging — `LLMEngine.find_contradictions` compares a new statement against the subject's recent public commitments; runs automatically when an extraction is published, flags land in `contradiction_flags` with `open` status for community/moderator review (`GET /contradictions`, `POST /contradictions/{id}/review`).
 - [x] **Open Juries:** Reputation-weighted jury pools — selection weights each pool member by `stake + sqrt(reputation)` (squashed so whales can't fully dominate, floored so everyone keeps a chance), with a pool-quorum gate (60% of target size, min 3) before a jury is seated. Accurate past jurors are drawn preferentially, raising the cost of brigading with fresh accounts (`backend/app/services/jury_weighting.py`, `backend/app/tasks/jury_selection.py`).
 
-### Missing Tech Stack Components
-- [ ] **Mobile App:** The PRD mentions React Native for mobile check-ins and notifications, which is currently unbuilt (only Next.js web exists).
+### Out of Scope (Deprioritized)
+- **Mobile App:** The PRD mentions React Native for mobile check-ins and notifications. This is currently out of scope and deprioritized so we can focus on core web functionality.
 
 ---
 

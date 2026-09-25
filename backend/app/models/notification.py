@@ -12,6 +12,7 @@ class NotificationType(str, enum.Enum):
     VOTE_OPEN = "VOTE_OPEN"
     VOTE_REMINDER = "VOTE_REMINDER"
     RESOLUTION = "RESOLUTION"
+    MILESTONE_DUE = "MILESTONE_DUE"
 
 
 class Notification(Base):
