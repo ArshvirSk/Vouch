@@ -70,13 +70,14 @@ export function HomeRightRail() {
   return (
     <aside
       style={{
-        width: "360px",
+        width: "380px",
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",
         gap: "18px",
         paddingTop: "24px",
-        paddingRight: "24px",
+        position: "sticky",
+        top: "70px",
       }}
     >
       {/* ── Quick Create ── */}

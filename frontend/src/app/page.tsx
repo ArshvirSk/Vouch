@@ -73,97 +73,111 @@ export default function HomePage() {
   }, [activeFilter]);
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "flex-start",
+        gap: "32px",
+        flex: 1,
+        minWidth: 0,
+        width: "100%",
+        padding: "0 28px 40px",
+      }}
+    >
       {/* Main column — narrower center, sidebars carry more width */}
-      <div className="shell-content" style={{ flex: 1, minWidth: 0, maxWidth: "840px", margin: 0 }}>
-      <HeroBanner />
-
-      {/* Recent Commitments header */}
       <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "14px",
-        }}
+        className="shell-content"
+        style={{ flex: "1 1 0%", maxWidth: "none", minWidth: 0, margin: 0, padding: "24px 0 0" }}
       >
-        <h2 style={{ fontSize: "var(--font-title)", fontWeight: 700, margin: 0 }}>
-          Recent Commitments
-        </h2>
-        <a
-          href="/explore"
+        <HeroBanner />
+
+        {/* Recent Commitments header */}
+        <div
           style={{
-            color: "var(--accent-primary)",
-            textDecoration: "none",
-            fontSize: "var(--font-caption)",
-            fontWeight: 600,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "14px",
           }}
         >
-          View all →
-        </a>
-      </div>
+          <h2 style={{ fontSize: "var(--font-title)", fontWeight: 700, margin: 0 }}>
+            Recent Commitments
+          </h2>
+          <a
+            href="/explore"
+            style={{
+              color: "var(--accent-primary)",
+              textDecoration: "none",
+              fontSize: "var(--font-caption)",
+              fontWeight: 600,
+            }}
+          >
+            View all →
+          </a>
+        </div>
 
-      {/* Filter row: All as filled pill, rest as text tabs (existing
+        {/* Filter row: All as filled pill, rest as text tabs (existing
           status-tab component restyled by sizing only) */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "4px",
-          marginBottom: "20px",
-          flexWrap: "wrap",
-        }}
-      >
-        {FEED_FILTERS.map((f) => {
-          const active = activeFilter === f.key;
-          if (f.key === "all") {
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            marginBottom: "20px",
+            flexWrap: "wrap",
+          }}
+        >
+          {FEED_FILTERS.map((f) => {
+            const active = activeFilter === f.key;
+            if (f.key === "all") {
+              return (
+                <button
+                  key={f.key}
+                  className={`pill ${active ? "active" : ""}`}
+                  onClick={() => setActiveFilter(f.key)}
+                  style={{ padding: "7px 18px" }}
+                >
+                  {f.label}
+                </button>
+              );
+            }
             return (
               <button
                 key={f.key}
-                className={`pill ${active ? "active" : ""}`}
+                className={`status-tab ${active ? "active" : ""}`}
                 onClick={() => setActiveFilter(f.key)}
-                style={{ padding: "7px 18px" }}
+                style={{
+                  padding: "7px 12px",
+                  borderRadius: "100px",
+                  background: active ? "rgba(255, 107, 53, 0.12)" : "transparent",
+                  color: active ? "var(--accent-primary)" : "var(--text-secondary)",
+                }}
               >
                 {f.label}
               </button>
             );
-          }
-          return (
-            <button
-              key={f.key}
-              className={`status-tab ${active ? "active" : ""}`}
-              onClick={() => setActiveFilter(f.key)}
-              style={{
-                padding: "7px 12px",
-                borderRadius: "100px",
-                background: active ? "rgba(255, 107, 53, 0.12)" : "transparent",
-                color: active ? "var(--accent-primary)" : "var(--text-secondary)",
-              }}
-            >
-              {f.label}
-            </button>
-          );
-        })}
-      </div>
+          })}
+        </div>
 
-      {/* Feed */}
-      {loading ? (
-        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-secondary)" }}>
-          Loading commitments...
-        </div>
-      ) : commitments.length === 0 ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "60px 20px",
-            color: "var(--text-secondary)",
-          }}
-        >
-          Nothing here for this filter yet.
-        </div>
-      ) : (
-        commitments.map((c) => <CommitmentFeedCard key={c.id} commitment={c} />)
-      )}
+        {/* Feed */}
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-secondary)" }}>
+            Loading commitments...
+          </div>
+        ) : commitments.length === 0 ? (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "60px 20px",
+              color: "var(--text-secondary)",
+            }}
+          >
+            Nothing here for this filter yet.
+          </div>
+        ) : (
+          commitments.map((c) => <CommitmentFeedCard key={c.id} commitment={c} />)
+        )}
       </div>
 
       {/* Right rail — Quick Create / Your Impact / Active in Your Area */}
