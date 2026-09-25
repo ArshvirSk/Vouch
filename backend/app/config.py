@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     # Vote window
     vote_window_hours: int = 72
 
+    # Phase 4: public-figure accountability
+    # Comma-separated handles promoted to moderators (bootstrap for the first ones)
+    moderator_handles: str = ""
+    # Jury pool size auto-assigned to commitments published from approved extractions
+    public_jury_pool_size: int = 5
+    # How many recent public commitments to include in a contradiction check
+    contradiction_ledger_size: int = 100
+
     # Reputation
     reputation_recompute_interval_minutes: int = 15
     reputation_decay_factor: float = 0.95  # per-event decay for older events

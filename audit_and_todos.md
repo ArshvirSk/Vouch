@@ -10,10 +10,10 @@ Based on the Product Requirements Document (PRD), the platform is currently at P
 - [ ] **On-chain Reputation:** Store user reputation and staking natively on-chain (Polygon/Aptos). *(Off-chain anchoring of commitment hashes now works — see §2.2 — but reputation itself is still DB-only.)*
 
 ### Phase 4: Public-Figure Accountability Skin
-- [ ] **Commitment Sourcing:** Manual submission queues and moderation tooling for statements from news/media. *(Basic user reports exist: `POST /reports`, `reports` table.)*
-- [ ] **NLP Extraction:** Automated LLM-assisted extraction of commitments from public transcripts.
+- [x] **Commitment Sourcing:** Manual submission queues and moderation tooling for statements from news/media — `POST /sources` submits, `GET /sources` is the public queue, `POST /sources/{id}/extract` + review endpoints are the moderator tooling (`backend/app/routers/sources.py`). Moderators are bootstrapped via the `VOUCH_MODERATOR_HANDLES` env list and the `is_moderator` user flag.
+- [x] **NLP Extraction:** Automated LLM-assisted extraction of commitments from public transcripts — `LLMEngine.extract_commitments` (Gemini structured output) pulls concrete promises with a falsifiable reformulation, suggested deadline, and confidence score; approved extractions publish as public commitments with an open jury pool.
+- [x] **Contradiction Detection:** AI-assisted flagging — `LLMEngine.find_contradictions` compares a new statement against the subject's recent public commitments; runs automatically when an extraction is published, flags land in `contradiction_flags` with `open` status for community/moderator review (`GET /contradictions`, `POST /contradictions/{id}/review`).
 - [ ] **Open Juries:** Large, open jury pools with reputation-weighted voting to resist brigading. *(Stake-weighted pools exist; reputation weighting and sybil resistance are future work.)*
-- [ ] **Contradiction Detection:** AI-assisted flagging for when a public figure's new statement conflicts with a historical one.
 
 ### Missing Tech Stack Components
 - [ ] **Mobile App:** The PRD mentions React Native for mobile check-ins and notifications, which is currently unbuilt (only Next.js web exists).
@@ -47,3 +47,4 @@ Based on the Product Requirements Document (PRD), the platform is currently at P
 - Full app import check → 21 routes registered, all schedulers wired.
 - In-process API smoke test via FastAPI `TestClient` → jury-size and falsifiability validation return proper 422s; `/health` OK.
 - `next build` → compiles cleanly, all 8 routes build, TypeScript passes.
+- Phase 4 additions: `pytest tests/` → 32 passed (incl. extraction/contradiction schemas, disabled-LLM fail-closed, moderator guard); live Gemini end-to-end check confirmed extraction pulls only concrete promises (ignored fluff sentences) and contradiction detection flags only the genuinely reversed commitment; `alembic heads` → single head `a7f3d2c91e04` with 6 new `/sources` + `/contradictions` routes registered.

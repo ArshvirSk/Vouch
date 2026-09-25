@@ -162,3 +162,74 @@ class FalsifiabilityResult(BaseModel):
     is_falsifiable: bool
     reason: str
     suggested_rewrite: str | None = None
+
+
+# ──────────────────────────────────────────────
+# Phase 4: source documents, extractions, contradictions
+# ──────────────────────────────────────────────
+
+class SourceDocumentCreate(BaseModel):
+    title: str = Field(..., min_length=3, max_length=300)
+    source_type: str = Field(..., pattern="^(news|transcript|speech|social_media|other)$")
+    source_url: str | None = None
+    content: str = Field(..., min_length=20)
+    published_at: datetime | None = None
+
+
+class ExtractedCommitmentResponse(BaseModel):
+    id: uuid.UUID
+    source_id: uuid.UUID
+    subject_name: str
+    statement: str
+    reformulated_condition: str
+    suggested_deadline: datetime | None
+    confidence: float
+    status: str
+    commitment_id: uuid.UUID | None
+
+    model_config = {"from_attributes": True}
+
+
+class SourceDocumentResponse(BaseModel):
+    id: uuid.UUID
+    title: str
+    source_type: str
+    source_url: str | None
+    content: str
+    published_at: datetime | None
+    status: str
+    created_at: datetime
+    reviewed_at: datetime | None
+    extractions: list[ExtractedCommitmentResponse] = []
+
+    model_config = {"from_attributes": True}
+
+
+class SourceDocumentListResponse(BaseModel):
+    sources: list[SourceDocumentResponse]
+    total: int
+
+
+class ExtractionReviewRequest(BaseModel):
+    decision: str = Field(..., pattern="^(approved|rejected)$")
+
+
+class SourceReviewRequest(BaseModel):
+    decision: str = Field(..., pattern="^(approved|rejected)$")
+
+
+class ContradictionFlagResponse(BaseModel):
+    id: uuid.UUID
+    source_id: uuid.UUID
+    extracted_commitment_id: uuid.UUID
+    existing_commitment_id: uuid.UUID
+    explanation: str
+    confidence: float
+    status: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ContradictionReviewRequest(BaseModel):
+    decision: str = Field(..., pattern="^(confirmed|dismissed)$")

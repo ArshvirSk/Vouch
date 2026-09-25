@@ -89,3 +89,22 @@ async def get_current_user(
         )
         
     return user
+
+
+async def require_moderator(current_user: User = Depends(get_current_user)) -> User:
+    """Guard for moderation endpoints (Phase 4 review tooling).
+
+    A user is a moderator if they carry the is_moderator flag or their handle
+    is listed in VOUCH_MODERATOR_HANDLES (comma-separated env bootstrap list,
+    used to promote the first moderators before any flag exists in the DB).
+    """
+    settings = get_settings()
+    bootstrap_handles = {
+        h.strip() for h in settings.moderator_handles.split(",") if h.strip()
+    }
+    if not current_user.is_moderator and current_user.handle not in bootstrap_handles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Moderator access required",
+        )
+    return current_user
