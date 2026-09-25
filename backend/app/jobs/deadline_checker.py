@@ -25,7 +25,9 @@ async def check_deadlines(db: AsyncSession) -> dict:
     Returns counts of transitioned commitments.
     """
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    # commitments.deadline is a naive-UTC column: bind naive datetimes or
+    # asyncpg raises on the aware/naive mismatch
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     vote_window = timedelta(hours=settings.vote_window_hours)
 
     results = {"transitioned_to_verification": 0, "auto_resolved": 0}

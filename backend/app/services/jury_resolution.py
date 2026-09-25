@@ -60,7 +60,8 @@ async def resolve_commitment(
     broken_count = vote_counts.get(VoteChoice.BROKEN, 0)
 
     # Determine verdict — TRD §4.3
-    now = datetime.now(timezone.utc)
+    # resolved_at is a naive-UTC column, so keep the datetime naive
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if met_count > broken_count:
         verdict = CommitmentStatus.MET
     elif broken_count > met_count:

@@ -76,11 +76,14 @@ class SourceDocument(Base):
     )
 
     submitted_by = relationship("User", foreign_keys=[submitted_by_id])
+    # lazy="selectin" so relationships load eagerly (and safely) in async sessions
     extractions = relationship(
-        "ExtractedCommitment", back_populates="source", cascade="all, delete-orphan"
+        "ExtractedCommitment", back_populates="source",
+        cascade="all, delete-orphan", lazy="selectin",
     )
     contradictions = relationship(
-        "ContradictionFlag", back_populates="source", cascade="all, delete-orphan"
+        "ContradictionFlag", back_populates="source",
+        cascade="all, delete-orphan", lazy="selectin",
     )
 
 

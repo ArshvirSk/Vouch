@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr, ConfigDict, model_validator
+from pydantic import BaseModel, Field, EmailStr, model_validator
 
 
 # ──────────────────────────────────────────────
@@ -155,9 +155,11 @@ class ReputationHistoryResponse(BaseModel):
 
 class FalsifiabilityResult(BaseModel):
     """Result of an LLM falsifiability check (also used as the Gemini
-    structured-output schema, hence the strict extra="forbid")."""
+    structured-output schema).
 
-    model_config = ConfigDict(extra="forbid")
+    NOTE: no extra="forbid" here — pydantic serializes that to an
+    `additional_properties` field the Gemini API rejects with 400.
+    """
 
     is_falsifiable: bool
     reason: str

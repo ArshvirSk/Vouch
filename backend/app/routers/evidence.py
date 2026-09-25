@@ -43,11 +43,15 @@ async def submit_evidence(
             detail=f"Cannot submit evidence for commitment in '{commitment.status.value}' status",
         )
 
-    # Check deadline (allow 1 hour grace window)
+    # Check deadline (allow 1 hour grace window).
+    # Normalize: the DB column is naive UTC, so compare like-for-like.
     grace_hours = 1
     now = datetime.now(timezone.utc)
     from datetime import timedelta
-    if now > commitment.deadline + timedelta(hours=grace_hours):
+    deadline = commitment.deadline
+    if deadline.tzinfo is None:
+        deadline = deadline.replace(tzinfo=timezone.utc)
+    if now > deadline + timedelta(hours=grace_hours):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Evidence submission deadline has passed",

@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, require_moderator
@@ -90,6 +91,20 @@ async def _get_source_or_404(db: AsyncSession, source_id: uuid.UUID) -> SourceDo
     return source
 
 
+async def _reload_source(db: AsyncSession, source_id: uuid.UUID) -> SourceDocument:
+    """Re-fetch a source with its extractions eagerly loaded.
+
+    Used after mutations + refresh, so serializing never triggers implicit
+    lazy IO (which is not allowed inside async sessions).
+    """
+    result = await db.execute(
+        select(SourceDocument)
+        .options(selectinload(SourceDocument.extractions))
+        .where(SourceDocument.id == source_id)
+    )
+    return result.scalar_one()
+
+
 @router.post("/sources", response_model=SourceDocumentResponse, status_code=status.HTTP_201_CREATED)
 async def submit_source(
     req: SourceDocumentCreate,
@@ -110,6 +125,7 @@ async def submit_source(
     db.add(source)
     await db.commit()
     await db.refresh(source)
+    source = await _reload_source(db, source.id)
     return _source_to_response(source)
 
 
@@ -195,6 +211,7 @@ async def run_extraction(
     source.extraction_cache = {"drafts": [d.model_dump(mode="json") for d in drafts]}
     await db.commit()
     await db.refresh(source)
+    source = await _reload_source(db, source.id)
     return _source_to_response(source)
 
 
@@ -213,6 +230,7 @@ async def review_source(
     source.reviewed_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(source)
+    source = await _reload_source(db, source.id)
     return _source_to_response(source)
 
 
@@ -276,11 +294,15 @@ async def review_extraction(
         )
 
     # Deadline: use the LLM-suggested one if present and in the future,
-    # otherwise default to 90 days from publication.
+    # otherwise default to 90 days from publication. The commitments.deadline
+    # column is naive UTC, so normalize aware datetimes before storing.
     now = datetime.now(timezone.utc)
     deadline = extraction.suggested_deadline
-    if deadline is None or deadline <= now:
-        deadline = now + timedelta(days=90)
+    if deadline is not None and deadline.tzinfo is not None:
+        deadline = deadline.replace(tzinfo=None)
+    now_naive = now.replace(tzinfo=None)
+    if deadline is None or deadline <= now_naive:
+        deadline = now_naive + timedelta(days=90)
 
     content_hash = hashlib.sha256(
         f"{extraction.statement}|{extraction.reformulated_condition}|{deadline.isoformat()}".encode()

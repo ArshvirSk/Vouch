@@ -87,7 +87,29 @@ async def anchor_pending_commitments():
             return
             
         logger.info(f"Found {len(commitments)} commitments to anchor.")
-        
+
+        # Defensive: leaves must be 32-byte hex. A single malformed row must
+        # not crash the whole batch — skip it with a warning instead.
+        valid_commitments = []
+        for c in commitments:
+            h = (c.content_hash or "").strip().lower()
+            if len(h) != 64:
+                logger.warning(
+                    "Skipping commitment %s: content_hash is not a 64-char hex string", c.id
+                )
+                continue
+            try:
+                bytes.fromhex(h)
+            except ValueError:
+                logger.warning("Skipping commitment %s: content_hash is not valid hex", c.id)
+                continue
+            valid_commitments.append(c)
+
+        if not valid_commitments:
+            logger.warning("All candidate commitments had malformed content hashes; nothing anchored.")
+            return
+        commitments = valid_commitments
+
         # Real Merkle root: leaves are the commitment content hashes, paired
         # and hashed up a binary tree (with last-leaf padding). Leaves are
         # persisted to the anchor log so proofs can be generated later.
