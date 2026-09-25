@@ -20,18 +20,31 @@ export function HeroBanner() {
   const router = useRouter();
 
   return (
-    <div
-      style={{
-        position: "relative",
-        borderRadius: "20px",
-        overflow: "hidden",
-        marginBottom: "28px",
-        minHeight: "260px",
-        display: "flex",
-        alignItems: "center",
-        border: "1px solid var(--border-subtle)",
-      }}
-    >
+    <div style={{ position: "relative", marginBottom: "28px" }}>
+      {/* Ambient orange glow behind the card — matches the reference halo */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: "-28px -20px -12px",
+          background:
+            "radial-gradient(58% 130% at 60% -10%, rgba(255,107,53,0.32) 0%, rgba(255,107,53,0.12) 40%, rgba(255,107,53,0.0) 72%)",
+          filter: "blur(22px)",
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          borderRadius: "20px",
+          overflow: "hidden",
+          minHeight: "224px",
+          display: "flex",
+          alignItems: "center",
+          border: "1px solid var(--border-subtle)",
+          boxShadow: "0 0 40px rgba(255, 107, 53, 0.10)",
+        }}
+      >
       {/* Banner image */}
       <img
         src="/assets/mumbai-hero-banner.png"
@@ -59,11 +72,11 @@ export function HeroBanner() {
       <div
         style={{
           position: "relative",
-          padding: "32px 36px",
-          maxWidth: "520px",
+          padding: "24px 32px",
+          maxWidth: "500px",
           display: "flex",
           flexDirection: "column",
-          gap: "12px",
+          gap: "9px",
         }}
       >
         <span
@@ -80,7 +93,7 @@ export function HeroBanner() {
 
         <h1
           style={{
-            fontSize: "34px",
+            fontSize: "30px",
             lineHeight: 1.15,
             fontWeight: 700,
             color: "var(--text-primary)",
@@ -153,6 +166,7 @@ export function HeroBanner() {
             </button>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );
