@@ -740,3 +740,34 @@ textarea.input {
 @media (max-width: 960px) {
   .sidebar { display: none; }
 }
+
+/* ─────────────────────────────────────────────
+   Feed status pills — stage 3 (outline variants
+   using the new status tokens; existing verdict
+   badge colors remain for resolved states)
+   ───────────────────────────────────────────── */
+
+.verdict-badge.feed-status-open {
+  background: transparent;
+  border: 1px solid var(--status-open);
+  color: var(--status-open);
+}
+.verdict-badge.feed-status-verification {
+  background: transparent;
+  border: 1px solid var(--status-in-verification);
+  color: var(--status-in-verification);
+}
+.verdict-badge.feed-status-awaiting {
+  background: transparent;
+  border: 1px solid var(--status-awaiting-evidence);
+  color: var(--status-awaiting-evidence);
+}
+
+/* Image-left feed card */
+.feed-card {
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.feed-card:hover {
+  border-color: rgba(255, 107, 53, 0.35);
+  transform: translateY(-1px);
+}

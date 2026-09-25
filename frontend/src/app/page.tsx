@@ -1,143 +1,165 @@
 "use client";
 
 /**
- * Home / Commitments Feed — Design Doc §5.1, now inside the new app shell.
- * Status strip tabs, category pills (India PRD §4), commitment cards.
+ * Home / Recent Commitments feed — redesign stages 1–3.
+ * Hero banner (stage 2) + Recent Commitments section with the new
+ * image-left card variant (stage 3).
  */
 
 import { useState, useEffect } from "react";
 import { type Commitment } from "@/lib/api";
-import { CommitmentCard } from "@/components/CommitmentCard";
+import { CommitmentFeedCard } from "@/components/CommitmentFeedCard";
 import { getDemoCommitments } from "@/components/CommitmentListPage";
 import { HeroBanner } from "@/components/HeroBanner";
 
-const STATUS_TABS = [
+/**
+ * Filter row per the reference: "All" is a filled pill; the rest are text
+ * tabs. Civic/Vendors filter by category; the remainder by status.
+ */
+const FEED_FILTERS = [
   { key: "all", label: "All" },
+  { key: "civic", label: "Civic" },
+  { key: "vendor", label: "Vendors" },
   { key: "open", label: "Open" },
   { key: "evidence_submitted", label: "Awaiting Evidence" },
   { key: "in_verification", label: "In Verification" },
   { key: "resolved", label: "Resolved" },
 ];
 
-/** Category pills — India PRD §4 (Personal / Civic / Vendors) */
-const CATEGORY_TABS = [
-  { key: "personal", label: "Personal" },
-  { key: "civic", label: "Civic" },
-  { key: "vendor", label: "Vendors" },
-];
-
 export default function HomePage() {
   const [commitments, setCommitments] = useState<Commitment[]>([]);
-  const [activeTab, setActiveTab] = useState("all");
-  const [activeCategory, setActiveCategory] = useState("personal");
+  const [activeFilter, setActiveFilter] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      setError(null);
       try {
         const { listCommitments } = await import("@/lib/api");
-        const statusParam =
-          activeTab === "all"
-            ? undefined
-            : activeTab === "resolved"
-              ? undefined // We'll filter client-side for resolved
-              : activeTab;
+
+        const isCategory = ["civic", "vendor"].includes(activeFilter);
+        const isStatus = !["all", "resolved"].includes(activeFilter);
+
         const data = await listCommitments({
-          ...(statusParam ? { status: statusParam } : {}),
-          category: activeCategory,
+          ...(isCategory ? { category: activeFilter } : {}),
+          ...(isStatus ? { status: activeFilter } : {}),
         });
+
         let filtered = data.commitments;
-        if (activeTab === "resolved") {
+        if (activeFilter === "resolved") {
           filtered = filtered.filter((c) =>
             ["met", "broken", "disputed"].includes(c.status)
           );
         }
         setCommitments(filtered);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load commitments");
-        // Use demo data if API is not available
-        setCommitments(
-          getDemoCommitments().filter((c) => c.category === activeCategory)
-        );
+      } catch {
+        // API unavailable → demo data, filtered to match the active tab
+        const demo = getDemoCommitments();
+        let filtered = demo;
+        if (activeFilter === "resolved") {
+          filtered = demo.filter((c) => ["met", "broken", "disputed"].includes(c.status));
+        } else if (["civic", "vendor"].includes(activeFilter)) {
+          filtered = demo.filter((c) => c.category === activeFilter);
+        } else if (activeFilter !== "all") {
+          filtered = demo.filter((c) => c.status === activeFilter);
+        }
+        setCommitments(filtered);
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [activeTab, activeCategory]);
+  }, [activeFilter]);
 
   return (
-    <div className="shell-content">
-      {/* Hero banner — home redesign stage 2 */}
+    <div className="shell-content" style={{ maxWidth: "860px" }}>
       <HeroBanner />
 
-      {/* Status strip — Design Doc §5.1 */}
-      <div className="status-strip" style={{ marginBottom: "16px" }}>
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.key}
-            className={`status-tab ${activeTab === tab.key ? "active" : ""}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Category pills — India PRD §4: Personal / Civic / Vendors.
-          Same pill component and visual treatment as before, now wired to
-          actually filter the feed. */}
-      <div style={{ marginBottom: "20px", display: "flex", gap: "8px" }}>
-        {CATEGORY_TABS.map((cat) => (
-          <button
-            key={cat.key}
-            className={`pill ${activeCategory === cat.key ? "active" : ""}`}
-            onClick={() => setActiveCategory(cat.key)}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Commitments list */}
-      {loading ? (
-        <div
+      {/* Recent Commitments header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "14px",
+        }}
+      >
+        <h2 style={{ fontSize: "var(--font-title)", fontWeight: 700, margin: 0 }}>
+          Recent Commitments
+        </h2>
+        <a
+          href="/explore"
           style={{
-            textAlign: "center",
-            padding: "60px 0",
-            color: "var(--text-secondary)",
+            color: "var(--accent-primary)",
+            textDecoration: "none",
+            fontSize: "var(--font-caption)",
+            fontWeight: 600,
           }}
         >
+          View all →
+        </a>
+      </div>
+
+      {/* Filter row: All as filled pill, rest as text tabs (existing
+          status-tab component restyled by sizing only) */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          marginBottom: "20px",
+          flexWrap: "wrap",
+        }}
+      >
+        {FEED_FILTERS.map((f) => {
+          const active = activeFilter === f.key;
+          if (f.key === "all") {
+            return (
+              <button
+                key={f.key}
+                className={`pill ${active ? "active" : ""}`}
+                onClick={() => setActiveFilter(f.key)}
+                style={{ padding: "7px 18px" }}
+              >
+                {f.label}
+              </button>
+            );
+          }
+          return (
+            <button
+              key={f.key}
+              className={`status-tab ${active ? "active" : ""}`}
+              onClick={() => setActiveFilter(f.key)}
+              style={{
+                padding: "7px 12px",
+                borderRadius: "100px",
+                background: active ? "rgba(255, 107, 53, 0.12)" : "transparent",
+                color: active ? "var(--accent-primary)" : "var(--text-secondary)",
+              }}
+            >
+              {f.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Feed */}
+      {loading ? (
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text-secondary)" }}>
           Loading commitments...
         </div>
       ) : commitments.length === 0 ? (
         <div
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
             textAlign: "center",
             padding: "60px 20px",
             color: "var(--text-secondary)",
           }}
         >
-          <p style={{ fontSize: "var(--font-subtitle)", marginBottom: "8px", color: "var(--text-primary)" }}>
-            No {activeCategory === "personal" ? "commitments" : `${activeCategory} commitments`} yet
-          </p>
-          <p style={{ margin: 0 }}>
-            {activeCategory === "personal"
-              ? "Create your first commitment to get started."
-              : activeCategory === "civic"
-                ? "Log a promise from a local official to get your ward's ledger started."
-                : "Log a contractor's job promise to start their track record."}
-          </p>
+          Nothing here for this filter yet.
         </div>
       ) : (
-        commitments.map((c) => <CommitmentCard key={c.id} commitment={c} />)
+        commitments.map((c) => <CommitmentFeedCard key={c.id} commitment={c} />)
       )}
     </div>
   );
