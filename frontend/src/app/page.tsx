@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { type Commitment } from "@/lib/api";
 import { CommitmentCard } from "@/components/CommitmentCard";
 import { getDemoCommitments } from "@/components/CommitmentListPage";
+import { HeroBanner } from "@/components/HeroBanner";
 
 const STATUS_TABS = [
   { key: "all", label: "All" },
@@ -70,25 +71,8 @@ export default function HomePage() {
 
   return (
     <div className="shell-content">
-      {/* Greeting */}
-      <h1
-        style={{
-          fontSize: "var(--font-display)",
-          fontWeight: 700,
-          marginBottom: "4px",
-        }}
-      >
-        Commitments
-      </h1>
-      <p
-        style={{
-          color: "var(--text-secondary)",
-          marginBottom: "24px",
-          fontSize: "var(--font-body)",
-        }}
-      >
-        Track promises, submit evidence, verify together.
-      </p>
+      {/* Hero banner — home redesign stage 2 */}
+      <HeroBanner />
 
       {/* Status strip — Design Doc §5.1 */}
       <div className="status-strip" style={{ marginBottom: "16px" }}>
