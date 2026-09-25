@@ -14,7 +14,7 @@ PRIVATE_KEY = os.getenv("PRIVATE_KEY")
 ANCHOR_CONTRACT_ADDRESS = os.getenv("ANCHOR_CONTRACT_ADDRESS")
 REPUTATION_CONTRACT_ADDRESS = os.getenv("REPUTATION_CONTRACT_ADDRESS")
 
-CHAIN_ID = 80002  # Polygon Amoy testnet
+CHAIN_ID = int(os.getenv("CHAIN_ID", "80002"))  # 80002 = Polygon Amoy testnet
 
 # Minimal ABI for VouchAnchor.sol
 ANCHOR_ABI = [
@@ -102,21 +102,45 @@ class Web3Service:
 
     # ── shared tx plumbing ──────────────────────────────────
 
-    def _send(self, fn_call, gas: int = 150_000) -> str:
-        """Build, sign and send a transaction from the backend account."""
+    def _fees(self) -> dict:
+        """EIP-1559 fees derived from the chain, not magic numbers.
+
+        maxFee = 2x current base fee + priority fee (priority configurable
+        via PRIORITY_FEE_GWEI; Polygon needs a meaningful priority tip).
+        """
+        try:
+            base = self.w3.eth.get_block("latest")["baseFeePerGas"]
+        except Exception:
+            base = self.w3.to_wei(50, "gwei")
+        priority = self.w3.to_wei(float(os.getenv("PRIORITY_FEE_GWEI", "30")), "gwei")
+        return {
+            "maxFeePerGas": 2 * base + priority,
+            "maxPriorityFeePerGas": priority,
+        }
+
+    def _send(self, fn_call) -> str:
+        """Estimate gas, build, sign and send a transaction from the backend account."""
         if not self.account:
             raise ValueError("Web3 configuration missing (PRIVATE_KEY)")
+
+        # Estimate from the actual call (attestations cost ~190k — a hardcoded
+        # cap either wastes gas or fails with 'out of gas')
+        try:
+            gas = int(fn_call.estimate_gas({"from": self.account.address}) * 1.2)
+        except Exception:
+            gas = 600_000  # conservative fallback if estimation itself reverts
 
         nonce = self.w3.eth.get_transaction_count(self.account.address)
         tx = fn_call.build_transaction({
             "chainId": CHAIN_ID,
             "gas": gas,
-            "maxFeePerGas": self.w3.to_wei("2", "gwei"),
-            "maxPriorityFeePerGas": self.w3.to_wei("1", "gwei"),
+            **self._fees(),
             "nonce": nonce,
         })
         signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=PRIVATE_KEY)
-        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        # web3.py v7 renamed rawTransaction -> raw_transaction
+        raw = getattr(signed_tx, "raw_transaction", None) or signed_tx.rawTransaction
+        tx_hash = self.w3.eth.send_raw_transaction(raw)
         return tx_hash.hex()
 
     # ── commitment batch anchoring ──────────────────────────
@@ -139,7 +163,7 @@ class Web3Service:
         if len(root_bytes) != 32:
             raise ValueError(f"Invalid root hash length: expected 32 bytes, got {len(root_bytes)}")
 
-        tx_hash = self._send(self.contract.functions.anchorBatch(root_bytes), gas=100_000)
+        tx_hash = self._send(self.contract.functions.anchorBatch(root_bytes))
         logger.info(f"Anchored batch root {root_hash} in tx {tx_hash}")
         return tx_hash
 
@@ -189,7 +213,6 @@ class Web3Service:
             self.reputation_contract.functions.attestReputation(
                 _checksum(user_address), score_scaled, observed_at, signature
             ),
-            gas=150_000,
         )
         logger.info("Attested reputation %s for %s in tx %s", score_scaled, user_address, tx_hash)
         return tx_hash

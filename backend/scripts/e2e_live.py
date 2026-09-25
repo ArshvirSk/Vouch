@@ -14,6 +14,7 @@ Run: cd backend && python -m scripts.e2e_live
 """
 
 import asyncio
+import os
 import sys
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -111,10 +112,23 @@ async def main() -> int:
 
         # ── 1. Users ────────────────────────────────────────────
         print("\n[1] Creating users (author, 2 jurors, moderator)...")
+        # In on-chain mode, users get the canonical hardhat-node test wallet
+        # addresses (#0 stays reserved for the backend signer/contract owner)
+        ONCHAIN_WALLETS = [
+            None,
+            "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",  # hardhat #1 → author
+            "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",  # hardhat #2 → juror1
+            "0x90F79bf6EB2c4f870365E785982E1f101E93b906",  # hardhat #3 → juror2
+        ]
+        onchain = os.environ.get("E2E_ONCHAIN") == "1"
         author = User(handle=f"{P}alice", email=f"{P}alice@t.dev")
         juror1 = User(handle=f"{P}bob", email=f"{P}bob@t.dev")
         juror2 = User(handle=f"{P}carol", email=f"{P}carol@t.dev")
         moderator = User(handle=f"{P}mod", email=f"{P}mod@t.dev", is_moderator=True)
+        if onchain:
+            author.wallet_address = ONCHAIN_WALLETS[1]
+            juror1.wallet_address = ONCHAIN_WALLETS[2]
+            juror2.wallet_address = ONCHAIN_WALLETS[3]
         db.add_all([author, juror1, juror2, moderator])
         await db.commit()
         for u in (author, juror1, juror2, moderator):
@@ -289,20 +303,55 @@ async def main() -> int:
         results.append(ok("reputation events emitted (author + jurors)", len(rep) >= 4, f"{len(rep)} events"))
 
         # ── 7. Milestone service pass + jobs ────────────────────
-        print("\n[7] Scheduled-job passes (milestones, deadline worker, anchoring no-op)...")
+        mode = "ON-CHAIN" if onchain else "no-chain (no-op expected)"
+        print(f"\n[7] Scheduled-job passes (milestones, deadline worker, anchoring — {mode})...")
         ms_result = await check_milestones(db)
         results.append(ok("milestone due/missed pass ran", isinstance(ms_result, dict), str(ms_result)))
 
         from app.tasks.anchor import anchor_pending_commitments
-        await anchor_pending_commitments()  # chain unconfigured → logged no-op
-        results.append(ok("batch anchoring job safe without chain config", True))
+        await anchor_pending_commitments()
+        if onchain:
+            results.append(ok("batch anchoring ran", True))
+        else:
+            results.append(ok("batch anchoring job safe without chain config", True))
 
         from app.tasks.anchor_reputation import anchor_reputations
-        rep_result = await anchor_reputations()  # chain unconfigured → attested=0
-        results.append(ok("reputation anchoring job safe without chain config", rep_result.get("attested") == 0, str(rep_result)))
+        rep_result = await anchor_reputations()
+        expected_attested = 3 if onchain else 0  # author + 2 jurors have wallets
+        label = ("reputation anchoring attested on-chain" if onchain
+                 else "reputation anchoring job safe without chain config")
+        results.append(ok(label, rep_result.get("attested") == expected_attested, str(rep_result)))
 
-        # ── 8. Cleanup ──────────────────────────────────────────
-        print("\n[8] Cleaning up e2e artifacts...")
+        # ── 8. On-chain verification (only in on-chain mode) ────
+        if onchain:
+            print("\n[8] Verifying on-chain state via RPC reads...")
+            from app.services.web3 import web3_service
+            results.append(ok("backend connected to chain", web3_service.reputation_contract is not None))
+
+            for user in (author, juror1, juror2):
+                await db.refresh(user)  # anchor job updates scores in its own session
+                att = web3_service.get_attestation(user.wallet_address)
+                results.append(
+                    ok(
+                        f"attestation readable for {user.handle}",
+                        att is not None and abs(att["score"] - float(user.reputation_score)) < 0.011,
+                        f"on-chain={att['score'] if att else None} vs db={float(user.reputation_score)}",
+                    )
+                )
+                results.append(
+                    ok(f"signature verifies for {user.handle}", web3_service.verify_attestation(user.wallet_address))
+                )
+
+            anchored = (await db.execute(
+                select(Commitment).where(
+                    Commitment.author_id == author.id,
+                    Commitment.onchain_tx_hash.isnot(None),
+                )
+            )).scalars().all()
+            results.append(ok("commitments anchored on-chain (tx hashes persisted)", len(anchored) >= 1, f"{len(anchored)} anchored"))
+
+        # ── 9. Cleanup ──────────────────────────────────────────
+        print("\n[9] Cleaning up e2e artifacts...")
         await cleanup(db, "e2e_")
         remaining = (await db.execute(select(User).where(User.handle.like("e2e_%")))).scalars().all()
         results.append(ok("database restored to pre-test state", len(remaining) == 0))
