@@ -74,8 +74,8 @@ export default function HomePage() {
 
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
-      {/* Main column — fills the space between sidebar and right rail */}
-      <div className="shell-content" style={{ flex: 1, minWidth: 0, maxWidth: "none" }}>
+      {/* Main column — narrower center, sidebars carry more width */}
+      <div className="shell-content" style={{ flex: 1, minWidth: 0, maxWidth: "840px", margin: 0 }}>
       <HeroBanner />
 
       {/* Recent Commitments header */}

@@ -620,7 +620,7 @@ textarea.input {
 
 /* Left sidebar */
 .sidebar {
-  width: 232px;
+  width: 272px;
   flex-shrink: 0;
   border-right: 1px solid var(--border-subtle);
   background: var(--bg-primary);

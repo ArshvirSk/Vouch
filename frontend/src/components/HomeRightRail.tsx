@@ -70,7 +70,7 @@ export function HomeRightRail() {
   return (
     <aside
       style={{
-        width: "300px",
+        width: "360px",
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",
