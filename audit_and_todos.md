@@ -6,7 +6,7 @@ Based on the Product Requirements Document (PRD), the platform is currently at P
 ### Phase 3: Governance Accountability Skin
 - [x] **Jury Mechanics:** Token/stake-weighted jury selection from open pools is implemented (`JuryPool` model, `POST /commitments/{id}/jury-pool`, stake-weighted selection in `backend/app/tasks/jury_selection.py`, scheduled + manually triggerable via `POST /admin/run-phase5-jobs`).
 - [x] **On-chain Data Ingestion:** DAO proposals import idempotently via `POST /dao/proposals` (unique per `(dao_name, external_id)`), and moderators push them into the Phase 4 pipeline with `POST /dao/proposals/{id}/to-source` — so DAO promises get the same Gemini extraction → review → publication → contradiction-check flow (`backend/app/routers/dao.py`, `dao_proposals` table).
-- [ ] **Milestone Tracking:** Link commitments to specific roadmap items with ongoing milestone checks.
+- [x] **Milestone Tracking:** Link commitments to specific roadmap items with ongoing milestone checks.
 - [x] **On-chain Reputation:** Reputation scores are published natively on Polygon Amoy via the new `VouchReputation.sol` contract — the backend signs `keccak256(abi.encode(user, score, observedAt))` (EIP-191) and `attestReputation` stores the score + signature; anyone can verify the attestation on-chain (`verifyAttestation`). Users need a linked wallet; the job recomputes scores then attests changed ones hourly and via `POST /admin/run-phase3-jobs` (`backend/app/tasks/anchor_reputation.py`). Commitment-hash batch anchoring (with on-chain Merkle inclusion proofs via `verifyInclusion`) is supported in the same contract. *Staking itself remains off-chain for now.*
 
 ### Phase 4: Public-Figure Accountability Skin
