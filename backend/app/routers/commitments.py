@@ -15,8 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.auth import get_current_user
 from app.models.user import User
-from app.models.commitment import Commitment, CommitmentJuror, CommitmentStatus
+from app.models.commitment import Commitment, CommitmentJuror, CommitmentStatus, CommitmentCategory
 from app.models.evidence import Evidence
+from app.models.vote import Vote
 from app.schemas import CommitmentCreate, CommitmentResponse, CommitmentListResponse
 from app.services.falsifiability import check_falsifiability
 
@@ -47,6 +48,13 @@ def commitment_to_response(commitment: Commitment) -> CommitmentResponse:
         author=None,
         juror_count=len(commitment.jurors) if commitment.jurors else 0,
         evidence_count=len(commitment.evidence) if commitment.evidence else 0,
+        category=commitment.category.value,
+        official_name=commitment.official_name,
+        official_role=commitment.official_role,
+        ward=commitment.ward,
+        source_type=commitment.source_type,
+        source_citation=commitment.source_citation,
+        vote_count=len(commitment.votes) if commitment.votes else 0,
     )
 
 
@@ -81,9 +89,10 @@ async def create_commitment(
             detail="Deadline must be in the future",
         )
 
-    # Validate juror handles — must exist, can't include author
+    # Validate juror handles — must exist, can't include author.
+    # Civic commitments use an open ward jury (PRD §5) — no named jurors.
     juror_users = []
-    if not req.is_public:
+    if not req.is_public and req.category != "civic":
         if not (2 <= len(req.juror_handles) <= 5):
             raise HTTPException(status_code=422, detail="Private commitments must have 2-5 jurors")
             
@@ -115,8 +124,14 @@ async def create_commitment(
         measurable_condition=req.measurable_condition,
         deadline=req.deadline.replace(tzinfo=None),
         content_hash=content_hash,
-        is_public=req.is_public,
-        jury_pool_size=req.jury_pool_size if req.is_public else None
+        is_public=req.is_public or req.category == "civic",
+        jury_pool_size=req.jury_pool_size if req.is_public else None,
+        category=CommitmentCategory(req.category),
+        official_name=req.official_name,
+        official_role=req.official_role,
+        ward=req.ward,
+        source_type=req.source_type,
+        source_citation=req.source_citation,
     )
     db.add(commitment)
     await db.flush()  # Get the ID
@@ -159,12 +174,25 @@ async def get_commitment(
 async def list_commitments(
     author: str | None = Query(None, description="Filter by author handle"),
     status_filter: str | None = Query(None, alias="status", description="Filter by status"),
+    category: str | None = Query(None, description="Filter by category: personal|civic|vendor"),
+    ward: str | None = Query(None, description="Filter civic commitments by ward/constituency"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
     """List/filter commitments — public endpoint."""
     query = select(Commitment)
+
+    if category:
+        try:
+            category_enum = CommitmentCategory(category)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid category: {category}")
+        query = query.where(Commitment.category == category_enum)
+
+    if ward:
+        query = query.where(Commitment.category == CommitmentCategory.CIVIC)
+        query = query.where(Commitment.ward == ward)
 
     if author:
         # Look up author by handle

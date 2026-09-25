@@ -34,6 +34,18 @@ class CommitmentStatus(str, enum.Enum):
     EXPIRED = "expired"
 
 
+class CommitmentCategory(str, enum.Enum):
+    """commitment_category enum — India PRD §3/§4.
+
+    personal: existing personal accountability flow (unchanged)
+    civic:    promises by public officials, verified by ward residents (PRD §5)
+    vendor:   contractor/service promises, verified by the customer (PRD §6)
+    """
+    PERSONAL = "personal"
+    CIVIC = "civic"
+    VENDOR = "vendor"
+
+
 class Commitment(Base):
     """Commitments table — TRD §3."""
 
@@ -70,6 +82,19 @@ class Commitment(Base):
     onchain_tx_hash: Mapped[str | None] = mapped_column(String, nullable=True)
     is_public: Mapped[bool] = mapped_column(default=False, server_default="false")
     jury_pool_size: Mapped[int | None] = mapped_column(nullable=True)
+
+    # India PRD §3/§4/§5 — category + civic metadata
+    category: Mapped[CommitmentCategory] = mapped_column(
+        Enum(CommitmentCategory, values_callable=lambda obj: [e.value for e in obj]),
+        default=CommitmentCategory.PERSONAL,
+        server_default=text("'personal'"),
+    )
+    official_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    official_role: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    ward: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # 'crowd' | 'sourced' — always labeled per PRD §5
+    source_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    source_citation: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Relationships
     author = relationship("User", back_populates="commitments", lazy="selectin")

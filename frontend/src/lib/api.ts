@@ -71,10 +71,19 @@ export interface Commitment {
   onchain_tx_hash: string | null;
   is_public: boolean;
   jury_pool_size: number | null;
-  
+
   author?: User;
   juror_count: number;
   evidence_count: number;
+
+  // India PRD §3/§4/§5
+  category: "personal" | "civic" | "vendor";
+  official_name?: string | null;
+  official_role?: string | null;
+  ward?: string | null;
+  source_type?: "crowd" | "sourced" | null;
+  source_citation?: string | null;
+  vote_count?: number;
 }
 
 export async function createCommitment(
@@ -101,10 +110,14 @@ export async function getCommitment(id: string) {
 export async function listCommitments(params?: {
   author?: string;
   status?: string;
+  category?: string;
+  ward?: string;
 }) {
   const searchParams = new URLSearchParams();
   if (params?.author) searchParams.set("author", params.author);
   if (params?.status) searchParams.set("status", params.status);
+  if (params?.category) searchParams.set("category", params.category);
+  if (params?.ward) searchParams.set("ward", params.ward);
   const query = searchParams.toString();
   return apiFetch<{ commitments: Commitment[]; total: number }>(
     `/commitments${query ? `?${query}` : ""}`

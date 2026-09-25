@@ -611,6 +611,7 @@ export default function CommitmentDetailPage({
 function getDemoCommitment(id: string): Commitment {
   return {
     id,
+    category: "personal",
     author_id: "demo-user",
     title: "Complete 90 LeetCode problems",
     description: "Solve 3 problems per day for 30 days",

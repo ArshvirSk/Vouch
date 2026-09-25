@@ -37,6 +37,9 @@ class User(Base):
     onchain_tx_hash: Mapped[str | None] = mapped_column(String, nullable=True)
     onchain_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # India PRD §5 — self-declared ward/constituency (civic vote eligibility)
+    ward: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
     # Relationships
     commitments = relationship("Commitment", back_populates="author", lazy="selectin")
     reputation_events = relationship("ReputationEvent", back_populates="user", lazy="selectin")

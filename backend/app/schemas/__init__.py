@@ -46,16 +46,40 @@ class CommitmentCreate(BaseModel):
     is_public: bool = False
     jury_pool_size: int | None = Field(None, ge=3, description="Minimum 3 for public pools")
 
+    # India PRD §3/§4/§5
+    category: str = Field("personal", pattern="^(personal|civic|vendor)$")
+    official_name: str | None = Field(None, max_length=200)
+    official_role: str | None = Field(None, max_length=200)
+    ward: str | None = Field(None, max_length=200)
+    source_type: str | None = Field(None, pattern="^(crowd|sourced)$")
+    source_citation: str | None = None
+
     @model_validator(mode="after")
     def validate_juror_handles(self) -> "CommitmentCreate":
-        """Enforce juror requirements by commitment visibility.
+        """Enforce jury requirements by commitment type (India PRD §3/§5/§6).
 
-        Private commitments need exactly 2-5 named jurors; public commitments
-        draw from an open pool and must declare a pool size instead.
+        - personal: 2-5 named jurors (existing flow, unchanged)
+        - vendor:   customer + optional second juror (1-2 named jurors, PRD §6)
+        - civic:    open jury of ward residents — no named jurors needed;
+          ward and source labeling are required instead (PRD §5)
         """
+        if self.category == "civic":
+            if not (self.ward and self.ward.strip()):
+                raise ValueError("Civic commitments must specify a ward or constituency")
+            if not (self.official_name and self.official_name.strip()):
+                raise ValueError("Civic commitments must name the official/figure")
+            if self.source_type not in ("crowd", "sourced"):
+                raise ValueError("Civic commitments must declare a source type (crowd or sourced)")
+            if self.source_type == "sourced" and not (self.source_citation and self.source_citation.strip()):
+                raise ValueError("Sourced civic commitments must include a citation or link")
+            return self
+
         if self.is_public:
             if self.jury_pool_size is None:
                 raise ValueError("Public commitments must specify jury_pool_size (minimum 3)")
+        elif self.category == "vendor":
+            if not (1 <= len(self.juror_handles) <= 2):
+                raise ValueError("Vendor commitments need the customer as juror (1-2 jurors)")
         elif not (2 <= len(self.juror_handles) <= 5):
             raise ValueError("Private commitments must name 2-5 jurors")
         return self
@@ -77,6 +101,15 @@ class CommitmentResponse(BaseModel):
     author: UserPublic | None = None
     juror_count: int = 0
     evidence_count: int = 0
+
+    # India PRD §3/§4/§5
+    category: str = "personal"
+    official_name: str | None = None
+    official_role: str | None = None
+    ward: str | None = None
+    source_type: str | None = None
+    source_citation: str | None = None
+    vote_count: int = 0
 
     model_config = {"from_attributes": True}
 

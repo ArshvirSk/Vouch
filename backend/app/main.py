@@ -12,8 +12,13 @@ from app.tasks.anchor import anchor_pending_commitments
 from app.tasks.jury_selection import select_public_juries
 from app.tasks.anchor_reputation import anchor_reputations
 from app.services.milestone_service import check_milestones
+from app.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
+
+async def scheduled_check_milestones():
+    async with AsyncSessionLocal() as db:
+        await check_milestones(db)
 
 scheduler = AsyncIOScheduler()
 
@@ -25,7 +30,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(select_public_juries, "interval", minutes=15, id="jury_selection")
     scheduler.add_job(anchor_pending_commitments, "interval", minutes=60, id="anchor_batch")
     scheduler.add_job(anchor_reputations, "interval", minutes=60, id="anchor_reputation")
-    scheduler.add_job(check_milestones, "interval", minutes=30, id="milestone_check")
+    scheduler.add_job(scheduled_check_milestones, "interval", minutes=30, id="milestone_check")
     scheduler.start()
     logger.info("Deadline scheduler started (every 5 minutes)")
     logger.info("Jury selection scheduler started (every 15 minutes)")
