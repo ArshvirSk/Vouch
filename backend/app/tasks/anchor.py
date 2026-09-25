@@ -1,21 +1,78 @@
 import logging
 import hashlib
-from app.db.session import get_db_context
-from app.models.commitment import Commitment
-from app.services.web3 import web3_service
+import json
+from datetime import datetime, timezone
+from pathlib import Path
 from sqlalchemy import select, update
 
+from app.database import AsyncSessionLocal
+from app.models.commitment import Commitment
+from app.services.web3 import web3_service
+
 logger = logging.getLogger(__name__)
+
+# Leaves of each anchored batch are persisted here so Merkle proofs can be
+# generated later. Written by anchor_pending_commitments(). Resolved relative
+# to this file so it works regardless of the process working directory.
+ANCHOR_LOG_PATH = Path(__file__).resolve().parents[2] / "scratch" / "anchor_log.json"
+
+
+def _build_merkle_root(leaves: list[str]) -> str:
+    """Build a real Merkle root from leaf hashes (sha256, binary tree).
+
+    Leaf count is padded up to the next power of two by duplicating the
+    last leaf (standard Bitcoin-style padding) so the tree is always
+    balanced and proofs are unambiguous.
+    """
+    if not leaves:
+        raise ValueError("Cannot build a Merkle root with no leaves")
+
+    level = [bytes.fromhex(leaf) for leaf in leaves]
+    while len(level) > 1:
+        if len(level) % 2 == 1:
+            level.append(level[-1])
+        level = [
+            hashlib.sha256(level[i] + level[i + 1]).digest()
+            for i in range(0, len(level), 2)
+        ]
+    return level[0].hex()
+
+
+def _append_anchor_log(commitments: list[Commitment], batch_root: str, tx_hash: str) -> None:
+    """Persist the leaves of an anchored batch so proofs can be built later."""
+    entry = {
+        "batch_root": batch_root,
+        "tx_hash": tx_hash,
+        "anchored_at": datetime.now(timezone.utc).isoformat(),
+        "leaves": [
+            {"commitment_id": str(c.id), "content_hash": c.content_hash}
+            for c in commitments
+        ],
+    }
+    try:
+        ANCHOR_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with open(ANCHOR_LOG_PATH, "r", encoding="utf-8") as f:
+                log = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            log = []
+        log.append(entry)
+        with open(ANCHOR_LOG_PATH, "w", encoding="utf-8") as f:
+            json.dump(log, f, indent=2)
+    except OSError as e:
+        # Never fail the anchoring job because of log persistence
+        logger.warning("Could not persist anchor log: %s", e)
+
 
 async def anchor_pending_commitments():
     """
     Finds all commitments that have a content_hash but no onchain_tx_hash,
-    computes a simple Merkle-like batch root, anchors it to Polygon, 
-    and updates the onchain_tx_hash for those commitments.
+    computes a real Merkle root over their content hashes, anchors it to
+    Polygon, and updates the onchain_tx_hash for those commitments.
     """
     logger.info("Starting batch anchoring job...")
-    
-    async with get_db_context() as db:
+
+    async with AsyncSessionLocal() as db:
         # Get commitments to anchor
         stmt = select(Commitment).where(
             Commitment.content_hash.isnot(None),
@@ -31,13 +88,11 @@ async def anchor_pending_commitments():
             
         logger.info(f"Found {len(commitments)} commitments to anchor.")
         
-        # Extremely simplified "Merkle Root" for the batch (just hashing all hashes together)
-        # In production, we'd use a real Merkle tree library and save the leaves
-        batch_hasher = hashlib.sha256()
-        for c in commitments:
-            batch_hasher.update(c.content_hash.encode('utf-8'))
-            
-        batch_root = batch_hasher.hexdigest()
+        # Real Merkle root: leaves are the commitment content hashes, paired
+        # and hashed up a binary tree (with last-leaf padding). Leaves are
+        # persisted to the anchor log so proofs can be generated later.
+        leaves = [c.content_hash for c in commitments]
+        batch_root = _build_merkle_root(leaves)
         logger.info(f"Computed batch root: {batch_root}")
         
         try:
@@ -53,7 +108,11 @@ async def anchor_pending_commitments():
             )
             await db.execute(update_stmt)
             await db.commit()
-            
+
+            # Persist the batch leaves alongside the root + tx hash so that
+            # Merkle inclusion proofs can be reconstructed later.
+            _append_anchor_log(commitments, batch_root, tx_hash)
+
             logger.info(f"Successfully anchored {len(commitments)} commitments in tx {tx_hash}")
         except Exception as e:
             logger.error(f"Failed to anchor batch: {e}")

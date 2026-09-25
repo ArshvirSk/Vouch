@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Commitment } from "@/lib/api";
 import { formatRelativeTime, calcTimeProgress, getStatusLabel, getInitials } from "@/lib/utils";
-import { Paperclip } from "lucide-react";
+import { Paperclip, Flag } from "lucide-react";
 
 interface CommitmentCardProps {
   commitment: Commitment;
@@ -114,6 +114,21 @@ export function CommitmentCard({ commitment }: CommitmentCardProps) {
               >
                 <Paperclip size={14} /> {commitment.evidence_count}
               </span>
+            )}
+            
+            {/* Flag button for public commitments */}
+            {commitment.is_public && (
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  alert("Report dialog would open here.");
+                }}
+                className="text-zinc-500 hover:text-red-500 transition-colors"
+                title="Report this public commitment"
+              >
+                <Flag size={14} />
+              </button>
             )}
           </div>
         </div>

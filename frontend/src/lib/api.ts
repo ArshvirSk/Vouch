@@ -35,9 +35,27 @@ async function apiFetch<T>(endpoint: string, options: ApiOptions = {}): Promise<
   return res.json();
 }
 
-// Auth logic is now handled natively via Supabase client
+// Auth logic is now handled natively via Privy
+export async function syncPrivyUser(handle: string, email: string | null, wallet: string | null, token: string) {
+  return apiFetch<{ user_id: string; handle: string }>("/auth/sync", {
+    method: "POST",
+    token,
+    body: { handle, email, wallet_address: wallet },
+  });
+}
 
+export async function searchUsers(query: string) {
+  return apiFetch<{ handle: string; id: string }[]>(`/users/search?q=${encodeURIComponent(query)}`);
+}
 // ─── Commitments ──────────────────────────────────
+
+export interface User {
+  id: string;
+  handle: string;
+  reputation_score: number;
+  current_streak: number;
+  created_at: string;
+}
 
 export interface Commitment {
   id: string;
@@ -50,6 +68,11 @@ export interface Commitment {
   content_hash: string;
   created_at: string;
   resolved_at: string | null;
+  onchain_tx_hash: string | null;
+  is_public: boolean;
+  jury_pool_size: number | null;
+  
+  author?: User;
   juror_count: number;
   evidence_count: number;
 }
@@ -172,6 +195,10 @@ export async function getUserProfile(handle: string) {
   return apiFetch<UserProfile>(`/users/${handle}`);
 }
 
+export async function getUserCommitments(handle: string) {
+  return apiFetch<Commitment[]>(`/users/${handle}/commitments`);
+}
+
 export async function getReputationHistory(handle: string) {
   return apiFetch<{ events: ReputationEvent[]; current_score: number }>(
     `/users/${handle}/reputation-history`
@@ -198,3 +225,29 @@ export async function markNotificationAsRead(id: string, token: string) {
     token,
   });
 }
+
+// ─── Evidence (List) ──────────────────────────────
+
+export async function listEvidence(commitmentId: string) {
+  return apiFetch<Evidence[]>(`/commitments/${commitmentId}/evidence`);
+}
+
+// ─── Jury Pool ────────────────────────────────────
+
+export interface JuryPoolInfo {
+  pool_size: number;
+  target_size: number | null;
+  user_has_joined: boolean;
+}
+
+export async function getJuryPool(commitmentId: string) {
+  return apiFetch<JuryPoolInfo>(`/commitments/${commitmentId}/jury-pool`);
+}
+
+export async function joinJuryPool(commitmentId: string, token: string) {
+  return apiFetch<{ status: string; pool_size: number }>(`/commitments/${commitmentId}/jury-pool`, {
+    method: "POST",
+    token,
+  });
+}
+

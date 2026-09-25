@@ -38,7 +38,7 @@ class ReputationEvent(Base):
         ForeignKey("commitments.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         server_default=text("now()"),
     )
 

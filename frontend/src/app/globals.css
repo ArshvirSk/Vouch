@@ -242,9 +242,10 @@ body {
 /* Stats row — Design Doc §5.5 (from Ref B profile pattern) */
 .stats-row {
   display: flex;
-  gap: 24px;
+  gap: 48px;
   justify-content: center;
   padding: 24px 0;
+  flex-wrap: wrap;
 }
 .stat-item {
   text-align: center;

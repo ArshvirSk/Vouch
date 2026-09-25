@@ -7,12 +7,15 @@
 
 import { useState, useEffect, use } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { getCommitment, submitEvidence, type Commitment, type Evidence } from "@/lib/api";
+import {
+  getCommitment, submitEvidence, listEvidence, getVotes, getJuryPool, joinJuryPool,
+  type Commitment, type Evidence, type Vote, type JuryPoolInfo
+} from "@/lib/api";
 import { formatRelativeTime, formatDate, getStatusLabel, calcTimeProgress } from "@/lib/utils";
 import { VoteButtons } from "@/components/VoteButtons";
 import { castVote } from "@/lib/api";
 import Link from "next/link";
-import { ArrowLeft, Check, X, Scale, ChevronDown, ChevronRight, Paperclip } from "lucide-react";
+import { ArrowLeft, Check, X, Scale, ChevronDown, ChevronRight, Paperclip, Globe, Users } from "lucide-react";
 
 export default function CommitmentDetailPage({
   params,
@@ -35,13 +38,41 @@ export default function CommitmentDetailPage({
   const [voteReason, setVoteReason] = useState("");
   const [voted, setVoted] = useState(false);
 
+  // Jury pool state
+  const [juryPool, setJuryPool] = useState<JuryPoolInfo | null>(null);
+  const [joiningPool, setJoiningPool] = useState(false);
+
+  // Vote results state
+  const [voteResults, setVoteResults] = useState<Vote[]>([]);
+
   useEffect(() => {
     async function load() {
       try {
         const data = await getCommitment(id);
         setCommitment(data);
+
+        // Load evidence from API
+        try {
+          const ev = await listEvidence(id);
+          setEvidenceList(ev);
+        } catch { /* Evidence list not critical */ }
+
+        // Load jury pool info for public commitments
+        if (data.is_public) {
+          try {
+            const pool = await getJuryPool(id);
+            setJuryPool(pool);
+          } catch { /* Pool info not critical */ }
+        }
+
+        // Load vote results for resolved commitments
+        if (["met", "broken", "disputed"].includes(data.status)) {
+          try {
+            const votes = await getVotes(id);
+            setVoteResults(votes);
+          } catch { /* Votes not critical */ }
+        }
       } catch {
-        // Use demo data
         setCommitment(getDemoCommitment(id));
       } finally {
         setLoading(false);
@@ -164,18 +195,35 @@ export default function CommitmentDetailPage({
           >
             {commitment.title}
           </h1>
-          <span
-            className={`verdict-badge ${commitment.status}`}
-            style={{
-              animation: isResolved ? "verdictReveal 0.4s ease" : undefined,
-              display: "flex",
-              alignItems: "center",
-              gap: "4px"
-            }}
-          >
-            {isResolved ? (commitment.status === "met" ? <Check size={16} /> : commitment.status === "broken" ? <X size={16} /> : <Scale size={16} />) : ""}
-            {getStatusLabel(commitment.status)}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {commitment.is_public && (
+              <span
+                style={{
+                  display: "flex", alignItems: "center", gap: "4px",
+                  fontSize: "var(--font-caption)",
+                  color: "var(--accent-primary)",
+                  background: "rgba(var(--accent-primary-rgb, 99,102,241), 0.1)",
+                  padding: "4px 10px",
+                  borderRadius: "var(--radius-full, 999px)",
+                  border: "1px solid rgba(var(--accent-primary-rgb, 99,102,241), 0.2)",
+                }}
+              >
+                <Globe size={14} /> Public
+              </span>
+            )}
+            <span
+              className={`verdict-badge ${commitment.status}`}
+              style={{
+                animation: isResolved ? "verdictReveal 0.4s ease" : undefined,
+                display: "flex",
+                alignItems: "center",
+                gap: "4px"
+              }}
+            >
+              {isResolved ? (commitment.status === "met" ? <Check size={16} /> : commitment.status === "broken" ? <X size={16} /> : <Scale size={16} />) : ""}
+              {getStatusLabel(commitment.status)}
+            </span>
+          </div>
         </div>
 
         {commitment.description && (
@@ -253,6 +301,76 @@ export default function CommitmentDetailPage({
             ` · Resolved ${formatDate(commitment.resolved_at)}`}
         </div>
       </div>
+
+      {/* Jury Pool section — for public commitments */}
+      {commitment.is_public && juryPool && !isResolved && (
+        <div className="card" style={{ marginBottom: "20px", padding: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                <Users size={18} style={{ color: "var(--accent-primary)" }} />
+                <h3 style={{ fontSize: "var(--font-body)", fontWeight: 600, margin: 0 }}>Jury Pool</h3>
+              </div>
+              <p style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)", margin: 0 }}>
+                {juryPool.pool_size} joined{juryPool.target_size ? ` / ${juryPool.target_size} target` : ""}
+              </p>
+            </div>
+            {user && !juryPool.user_has_joined && commitment.author_id !== user.id && (
+              <button
+                className="btn btn-primary"
+                style={{ fontSize: "var(--font-caption)", padding: "8px 16px" }}
+                disabled={joiningPool}
+                onClick={async () => {
+                  if (!user) return;
+                  setJoiningPool(true);
+                  try {
+                    const result = await joinJuryPool(id, user.token);
+                    setJuryPool({ ...juryPool, pool_size: result.pool_size, user_has_joined: true });
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Failed to join pool");
+                  } finally {
+                    setJoiningPool(false);
+                  }
+                }}
+              >
+                {joiningPool ? "Joining..." : "Join Jury Pool"}
+              </button>
+            )}
+            {juryPool.user_has_joined && (
+              <span style={{ fontSize: "var(--font-caption)", color: "var(--accent-verified, var(--accent-primary))" }}>
+                <Check size={14} style={{ verticalAlign: "middle" }} /> Joined
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Vote Results — visible after resolution */}
+      {isResolved && voteResults.length > 0 && (
+        <div className="card" style={{ marginBottom: "20px", padding: "20px" }}>
+          <h3 style={{ fontSize: "var(--font-subtitle)", fontWeight: 600, marginBottom: "16px" }}>Vote Results</h3>
+          {(() => {
+            const met = voteResults.filter(v => v.vote === "met").length;
+            const broken = voteResults.filter(v => v.vote === "broken").length;
+            const abstain = voteResults.filter(v => v.vote === "abstain").length;
+            const total = voteResults.length;
+            return (
+              <div>
+                <div style={{ display: "flex", gap: "16px", marginBottom: "12px", fontSize: "var(--font-caption)" }}>
+                  <span style={{ color: "var(--accent-verified, #22c55e)" }}>Met: {met}</span>
+                  <span style={{ color: "var(--accent-broken, #ef4444)" }}>Broken: {broken}</span>
+                  <span style={{ color: "var(--text-secondary)" }}>Abstain: {abstain}</span>
+                </div>
+                <div style={{ display: "flex", height: "8px", borderRadius: "4px", overflow: "hidden", background: "var(--border-subtle)" }}>
+                  {met > 0 && <div style={{ width: `${(met/total)*100}%`, background: "var(--accent-verified, #22c55e)" }} />}
+                  {broken > 0 && <div style={{ width: `${(broken/total)*100}%`, background: "var(--accent-broken, #ef4444)" }} />}
+                  {abstain > 0 && <div style={{ width: `${(abstain/total)*100}%`, background: "var(--text-secondary)" }} />}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Jury Voting section — Design Doc §5.4 */}
       {isVerification && !voted && (
@@ -507,6 +625,9 @@ function getDemoCommitment(id: string): Commitment {
       Date.now() - 5 * 24 * 60 * 60 * 1000
     ).toISOString(),
     resolved_at: null,
+    onchain_tx_hash: null,
+    is_public: false,
+    jury_pool_size: null,
     juror_count: 3,
     evidence_count: 2,
   };

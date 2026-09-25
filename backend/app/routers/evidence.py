@@ -82,3 +82,34 @@ async def submit_evidence(
         content_hash=evidence.content_hash,
         submitted_at=evidence.submitted_at,
     )
+
+
+@router.get("/{commitment_id}/evidence", response_model=list[EvidenceResponse])
+async def list_evidence(
+    commitment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """List all evidence for a commitment — public endpoint."""
+    commitment = await db.get(Commitment, commitment_id)
+    if not commitment:
+        raise HTTPException(status_code=404, detail="Commitment not found")
+
+    result = await db.execute(
+        select(Evidence)
+        .where(Evidence.commitment_id == commitment_id)
+        .order_by(Evidence.submitted_at.asc())
+    )
+    evidence_list = list(result.scalars().all())
+
+    return [
+        EvidenceResponse(
+            id=e.id,
+            commitment_id=e.commitment_id,
+            submitter_id=e.submitter_id,
+            type=e.type.value,
+            content=e.content,
+            content_hash=e.content_hash,
+            submitted_at=e.submitted_at,
+        )
+        for e in evidence_list
+    ]

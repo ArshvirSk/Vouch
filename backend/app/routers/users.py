@@ -19,6 +19,24 @@ from app.schemas import UserPublic, ReputationEventResponse, ReputationHistoryRe
 router = APIRouter(prefix="/users", tags=["users"])
 
 
+@router.get("/search", response_model=list[dict])
+async def search_users(
+    q: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Search users by handle prefix."""
+    if not q or len(q) < 2:
+        return []
+    
+    result = await db.execute(
+        select(User)
+        .where(User.handle.ilike(f"%{q}%"))
+        .limit(5)
+    )
+    users = result.scalars().all()
+    return [{"handle": u.handle, "id": str(u.id)} for u in users]
+
+
 @router.get("/{handle}", response_model=dict)
 async def get_user_profile(
     handle: str,
@@ -118,3 +136,27 @@ async def get_reputation_history(
         ],
         current_score=float(user.reputation_score),
     )
+
+
+@router.get("/{handle}/commitments", response_model=list[dict])
+async def get_user_commitments(
+    handle: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all commitments authored by a user."""
+    # Find user
+    result = await db.execute(select(User).where(User.handle == handle))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Fetch commitments
+    from app.schemas import CommitmentResponse
+    commits_result = await db.execute(
+        select(Commitment)
+        .where(Commitment.author_id == user.id)
+        .order_by(Commitment.created_at.desc())
+    )
+    commits = commits_result.scalars().all()
+    
+    return [CommitmentResponse.model_validate(c).model_dump() for c in commits]

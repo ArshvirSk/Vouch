@@ -1,9 +1,26 @@
 import uuid
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import String, ForeignKey, Index, text, Enum
+from sqlalchemy import String, ForeignKey, Index, text, Enum, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from app.database import Base
+
+
+class JuryPool(Base):
+    __tablename__ = "jury_pools"
+
+    id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    commitment_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("commitments.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    staked_amount: Mapped[float] = mapped_column(default=0.0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=text("now()"),
+    )
+
+    user = relationship("User")
+    commitment = relationship("Commitment")
 
 
 class CommitmentStatus(str, enum.Enum):
@@ -46,11 +63,13 @@ class Commitment(Base):
     # sha256(title+description+condition+deadline) — for future on-chain anchoring
     content_hash: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         server_default=text("now()"),
     )
     resolved_at: Mapped[datetime | None] = mapped_column(nullable=True)
     onchain_tx_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    is_public: Mapped[bool] = mapped_column(default=False, server_default="false")
+    jury_pool_size: Mapped[int | None] = mapped_column(nullable=True)
 
     # Relationships
     author = relationship("User", back_populates="commitments", lazy="selectin")
@@ -79,7 +98,7 @@ class CommitmentJuror(Base):
         ForeignKey("users.id"), nullable=False
     )
     invited_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         server_default=text("now()"),
     )
 

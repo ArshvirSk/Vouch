@@ -7,10 +7,11 @@ from app.database import Base
 
 
 class NotificationType(str, enum.Enum):
-    INVITE = "invite"
-    DEADLINE_WARNING = "deadline_warning"
-    VOTE_OPEN = "vote_open"
-    RESOLUTION = "resolution"
+    INVITE = "INVITE"
+    DEADLINE_WARNING = "DEADLINE_WARNING"
+    VOTE_OPEN = "VOTE_OPEN"
+    VOTE_REMINDER = "VOTE_REMINDER"
+    RESOLUTION = "RESOLUTION"
 
 
 class Notification(Base):
@@ -28,7 +29,7 @@ class Notification(Base):
     message: Mapped[str] = mapped_column(String, nullable=False)
     is_read: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
     created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         server_default=text("now()"),
     )
 

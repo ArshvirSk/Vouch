@@ -28,3 +28,8 @@ Thumbs.db
 pgdata/
 redisdata/
 docs/
+
+# Tooling / runtime artifacts
+.pytest_cache/
+backend/scratch/anchor_log.json
+frontend/.schema-uid.json

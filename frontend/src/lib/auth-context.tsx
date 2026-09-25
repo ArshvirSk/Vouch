@@ -1,16 +1,18 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { supabase } from "./supabase";
+import { usePrivy } from "@privy-io/react-auth";
+import { syncPrivyUser } from "./api"; // We will add this to api.ts
 
 interface AuthUser {
-  id: string;
-  handle: string;
-  token: string;
+  id: string; // The database UUID
+  handle: string; // The user's handle
+  token: string; // The Privy JWT
 }
 
 interface AuthContextType {
   user: AuthUser | null;
+  login: () => void;
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -18,57 +20,78 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  login: () => {},
   logout: () => {},
   isAuthenticated: false,
   loading: true,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { ready, authenticated, user: privyUser, getAccessToken, login: privyLogin, logout: privyLogout } = usePrivy();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setUser({
-          id: session.user.id,
-          handle: session.user.user_metadata?.handle || "user",
-          token: session.access_token,
-        });
-        localStorage.setItem("vouch_token", session.access_token);
-      }
-      setLoading(false);
-    });
+    async function sync() {
+      if (!ready) return;
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session) {
-          setUser({
-            id: session.user.id,
-            handle: session.user.user_metadata?.handle || "user",
-            token: session.access_token,
-          });
-          localStorage.setItem("vouch_token", session.access_token);
-        } else {
+      if (authenticated && privyUser && !syncing) {
+        setSyncing(true);
+        try {
+          const token = await getAccessToken();
+          if (!token) throw new Error("No token");
+
+          // Check if we already synced this session
+          const cachedHandle = localStorage.getItem("vouch_handle");
+          const cachedUserId = localStorage.getItem("vouch_user_id");
+
+          if (cachedHandle && cachedUserId) {
+            setUser({ id: cachedUserId, handle: cachedHandle, token });
+            localStorage.setItem("vouch_token", token);
+          } else {
+            // Need to sync with backend to get the UUID and handle
+            // If the user doesn't exist yet, we can't create them without a handle.
+            // But we will try to sync first (the backend might have a default handle or fail).
+            // Actually, we should redirect to an onboarding flow if it fails.
+            // For now, let's just attempt a sync with a fallback handle based on ID.
+            const fallbackHandle = privyUser.id.replace("did:privy:", "").substring(0, 10);
+            const email = privyUser.email?.address || null;
+            const wallet = privyUser.wallet?.address || null;
+            
+            const response = await syncPrivyUser(fallbackHandle, email, wallet, token);
+            
+            setUser({ id: response.user_id, handle: response.handle, token });
+            localStorage.setItem("vouch_token", token);
+            localStorage.setItem("vouch_handle", response.handle);
+            localStorage.setItem("vouch_user_id", response.user_id);
+          }
+        } catch (error) {
+          console.error("Auth sync error", error);
           setUser(null);
-          localStorage.removeItem("vouch_token");
+        } finally {
+          setLoading(false);
+          setSyncing(false);
         }
+      } else if (!authenticated) {
+        setUser(null);
+        localStorage.removeItem("vouch_token");
+        localStorage.removeItem("vouch_handle");
+        localStorage.removeItem("vouch_user_id");
         setLoading(false);
       }
-    );
+    }
 
-    return () => subscription.unsubscribe();
-  }, []);
+    sync();
+  }, [ready, authenticated, privyUser]);
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    await privyLogout();
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, logout, isAuthenticated: !!user, loading }}
+      value={{ user, login: privyLogin, logout, isAuthenticated: !!user, loading: loading || (!ready) }}
     >
       {children}
     </AuthContext.Provider>

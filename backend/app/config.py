@@ -15,9 +15,16 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440  # 24 hours
     
-    # Supabase (Hybrid Auth)
+    # Supabase (Auth)
     supabase_url: str = ""
     supabase_anon_key: str = ""
+    privy_app_id: str = ""
+
+    # Gemini LLM for Falsifiability
+    # Supported models: any Gemini model id, e.g. "gemini-2.5-flash"
+    llm_model: str = "gemini-2.5-flash"
+    gemini_api_key: str | None = None
+    enable_llm_check: bool = False
 
     # Vote window
     vote_window_hours: int = 72
@@ -25,10 +32,6 @@ class Settings(BaseSettings):
     # Reputation
     reputation_recompute_interval_minutes: int = 15
     reputation_decay_factor: float = 0.95  # per-event decay for older events
-
-    # LLM (stubbed for MVP)
-    llm_api_key: str = ""
-    llm_enabled: bool = False
 
     class Config:
         env_file = ".env"

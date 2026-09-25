@@ -6,12 +6,17 @@
  */
 
 import { useState, useEffect, use } from "react";
-import { getUserProfile, getReputationHistory, type UserProfile, type ReputationEvent } from "@/lib/api";
+import { getUserProfile, getReputationHistory, getUserCommitments, type UserProfile, type ReputationEvent, type Commitment } from "@/lib/api";
 import { ReputationGauge } from "@/components/ReputationGauge";
 import { WaveformBars } from "@/components/WaveformBars";
 import { formatDate } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
-import { Flame } from "lucide-react";
+import { Flame, Wallet, Key, Loader2 } from "lucide-react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { EAS, SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
+import { BrowserProvider } from "ethers";
+import { EAS_CONTRACT_ADDRESS, VOUCH_SCHEMA_UID, isSchemaRegistered } from "@/lib/eas";
 
 export default function ProfilePage({
   params,
@@ -19,30 +24,104 @@ export default function ProfilePage({
   params: Promise<{ handle: string }>;
 }) {
   const { handle } = use(params);
+  const { user: authUser } = useAuth();
+  const { user: privyUser, exportWallet, createWallet, ready } = usePrivy();
+  const { wallets } = useWallets();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [events, setEvents] = useState<ReputationEvent[]>([]);
-  const [activeTab, setActiveTab] = useState<"history" | "juror">("history");
+  const [commitments, setCommitments] = useState<Commitment[]>([]);
+  const [activeTab, setActiveTab] = useState<"commitments" | "history" | "juror">("commitments");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const [profileData, historyData] = await Promise.all([
+        const [profileData, historyData, commitmentsData] = await Promise.all([
           getUserProfile(handle),
           getReputationHistory(handle),
+          getUserCommitments(handle),
         ]);
         setProfile(profileData);
         setEvents(historyData.events);
+        setCommitments(commitmentsData);
       } catch {
         // Demo data
         setProfile(getDemoProfile(handle));
         setEvents(getDemoEvents());
+        setCommitments([]);
       } finally {
         setLoading(false);
       }
     }
     load();
   }, [handle]);
+
+  const [isMinting, setIsMinting] = useState(false);
+  const [mintTxUid, setMintTxUid] = useState<string | null>(null);
+
+  const handleMintReputation = async () => {
+    try {
+      setIsMinting(true);
+      setMintTxUid(null);
+
+      // Find the embedded wallet
+      const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+      if (!embeddedWallet) {
+        throw new Error("No embedded wallet found. Please create one first.");
+      }
+
+      // Ensure we are on Base Sepolia
+      if (embeddedWallet.chainId !== "eip155:84532") {
+        await embeddedWallet.switchChain(84532);
+      }
+
+      // Guard against the unregistered dev placeholder UID
+      if (!isSchemaRegistered) {
+        throw new Error(
+          "Reputation schema is not registered yet. Set NEXT_PUBLIC_VOUCH_SCHEMA_UID in .env.local (see frontend/scripts/registerSchema.js)."
+        );
+      }
+
+      // Get an ethers signer from the embedded wallet's EIP-1193 provider
+      const ethereumProvider = await embeddedWallet.getEthereumProvider();
+      const ethersProvider = new BrowserProvider(ethereumProvider);
+      const signer = await ethersProvider.getSigner();
+
+      // Initialize EAS
+      const eas = new EAS(EAS_CONTRACT_ADDRESS);
+      eas.connect(signer as any);
+
+      // Initialize SchemaEncoder
+      const schemaEncoder = new SchemaEncoder("uint256 reputationScore, string handle");
+      const encodedData = schemaEncoder.encodeData([
+        { name: "reputationScore", value: Math.floor(profile?.user.reputation_score || 0), type: "uint256" },
+        { name: "handle", value: profile?.user.handle || "", type: "string" },
+      ]);
+
+      // Mint Attestation
+      const transaction = await eas.attest({
+        schema: VOUCH_SCHEMA_UID,
+        data: {
+          recipient: embeddedWallet.address,
+          expirationTime: BigInt(0),
+          revocable: true,
+          data: encodedData,
+        },
+      });
+
+      const newAttestationUID = await transaction.wait();
+      setMintTxUid(newAttestationUID);
+    } catch (err: any) {
+      console.error(err);
+      if (err.message?.includes("insufficient funds") || err.message?.includes("gas")) {
+        alert("Transaction failed: Your wallet needs Base Sepolia ETH to pay for gas.");
+      } else {
+        alert(err.message || "Failed to mint reputation");
+      }
+    } finally {
+      setIsMinting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -108,8 +187,8 @@ export default function ProfilePage({
           <div className="stat-label">Reputation</div>
         </div>
         <div className="stat-item">
-          <div className="stat-value" style={{ color: "var(--accent-primary)", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
-            <Flame size={20} /> {profile.user.current_streak}
+          <div className="stat-value" style={{ color: "var(--accent-primary)", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+            <Flame size={28} style={{ marginTop: "-2px" }} /> {profile.user.current_streak}
           </div>
           <div className="stat-label">Streak</div>
         </div>
@@ -168,8 +247,14 @@ export default function ProfilePage({
         </div>
       </div>
 
-      {/* Tabs: History / As Juror — Design Doc §5.5 */}
+      {/* Tabs: Commitments / History / As Juror */}
       <div className="status-strip" style={{ marginBottom: "20px" }}>
+        <button
+          className={`status-tab ${activeTab === "commitments" ? "active" : ""}`}
+          onClick={() => setActiveTab("commitments")}
+        >
+          Commitments
+        </button>
         <button
           className={`status-tab ${activeTab === "history" ? "active" : ""}`}
           onClick={() => setActiveTab("history")}
@@ -186,8 +271,33 @@ export default function ProfilePage({
 
       {/* Event list */}
       <div>
-        {(activeTab === "history" ? commitmentEvents : jurorEvents).length ===
-        0 ? (
+        {activeTab === "commitments" ? (
+          commitments.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "32px", color: "var(--text-secondary)" }}>
+              No commitments yet
+            </div>
+          ) : (
+            commitments.map((commitment) => (
+              <Link key={commitment.id} href={`/commitment/${commitment.id}`} style={{ textDecoration: "none" }}>
+                <div className="card animate-in" style={{ marginBottom: "8px", padding: "14px 16px" }}>
+                  <div style={{ fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
+                    {commitment.title}
+                  </div>
+                  <div style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)", display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ 
+                      color: commitment.status === "met" ? "var(--accent-verified)" : 
+                             commitment.status === "broken" ? "var(--accent-broken)" : 
+                             "var(--text-secondary)" 
+                    }}>
+                      {commitment.status.replace(/_/g, " ").toUpperCase()}
+                    </span>
+                    <span>{formatDate(commitment.created_at)}</span>
+                  </div>
+                </div>
+              </Link>
+            ))
+          )
+        ) : (activeTab === "history" ? commitmentEvents : jurorEvents).length === 0 ? (
           <div
             style={{
               textAlign: "center",
@@ -256,22 +366,84 @@ export default function ProfilePage({
         View Partners & Jurors ({profile.stats.partner_count})
       </Link>
 
-      {/* Web3 Export Section */}
-      <div style={{ marginTop: "32px", padding: "16px", background: "var(--bg-surface)", borderRadius: "8px", border: "1px solid var(--border-color)" }}>
-        <h3 style={{ fontSize: "var(--font-body)", fontWeight: 600, marginBottom: "8px" }}>Web3 Reputation</h3>
-        <p style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)", marginBottom: "16px" }}>
-          Connect your wallet to export your reputation score as an immutable EAS attestation on Polygon.
-        </p>
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <button 
-            className="btn btn-primary" 
-            onClick={() => alert("EAS Attestation creation triggered! (Mock implementation)")}
-            style={{ flex: 1 }}
-          >
-            Mint Attestation
-          </button>
+      {/* Web3 Export & Wallet Section */}
+      {authUser?.handle === profile.user.handle && (
+        <div style={{ marginTop: "32px", padding: "20px", background: "var(--bg-surface)", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <Wallet size={20} color="var(--accent-primary)" />
+            <h3 style={{ fontSize: "var(--font-body)", fontWeight: 600, margin: 0 }}>Embedded Wallet</h3>
+          </div>
+          <p style={{ fontSize: "var(--font-caption)", color: "var(--text-secondary)", marginBottom: "16px" }}>
+            This wallet was automatically created for you by Privy. You can use it to hold stakes and attest to your reputation.
+          </p>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {(() => {
+              const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <span style={{ fontSize: "var(--font-caption)", fontWeight: 600, color: "var(--text-secondary)" }}>
+                    Wallet Address
+                  </span>
+                  <div style={{ 
+                    fontFamily: "monospace", 
+                    background: "var(--bg-surface-raised)", 
+                    padding: "8px 12px", 
+                    borderRadius: "6px",
+                    wordBreak: "break-all",
+                    fontSize: "var(--font-caption)"
+                  }}>
+                    {embeddedWallet ? (
+                      embeddedWallet.address
+                    ) : ready ? (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>No embedded wallet found.</span>
+                        <button 
+                          className="btn btn-outline" 
+                          style={{ padding: "4px 8px", fontSize: "12px" }}
+                          onClick={() => createWallet()}
+                        >
+                          Create Wallet
+                        </button>
+                      </div>
+                    ) : (
+                      "Loading wallet..."
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+              {mintTxUid ? (
+                <div style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid var(--accent-verified)", color: "var(--accent-verified)", textAlign: "center", fontSize: "14px" }}>
+                  <span style={{ display: "block", marginBottom: "4px" }}>Minted!</span>
+                  <a href={`https://sepolia.basescan.org/tx/${mintTxUid}`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline" }}>
+                    View on BaseScan
+                  </a>
+                </div>
+              ) : (
+                <button 
+                  className="btn btn-primary" 
+                  onClick={handleMintReputation}
+                  disabled={isMinting}
+                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", opacity: isMinting ? 0.7 : 1 }}
+                >
+                  {isMinting ? <Loader2 size={16} className="animate-spin" /> : null}
+                  {isMinting ? "Minting..." : "Mint Reputation"}
+                </button>
+              )}
+              <button 
+                className="btn btn-outline" 
+                onClick={() => exportWallet()}
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+              >
+                <Key size={16} /> Export Key
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

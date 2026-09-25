@@ -5,10 +5,10 @@
  * Conversational, step-by-step form with falsifiability check inline warning.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { createCommitment } from "@/lib/api";
+import { createCommitment, searchUsers } from "@/lib/api";
 import { AlertTriangle, X, ArrowLeft, ArrowRight } from "lucide-react";
 
 type Step = "title" | "condition" | "deadline" | "jurors" | "review";
@@ -24,6 +24,41 @@ export default function CreateCommitmentPage() {
   const [jurorHandles, setJurorHandles] = useState<string[]>([""]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const [activeJurorIndex, setActiveJurorIndex] = useState<number | null>(null);
+  const [searchResults, setSearchResults] = useState<{handle: string, id: string}[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Debounced search for jurors
+  useEffect(() => {
+    if (activeJurorIndex === null) {
+      setSearchResults([]);
+      return;
+    }
+    const query = jurorHandles[activeJurorIndex];
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const results = await searchUsers(query);
+        // Filter out handles that are already selected, and the current user's handle
+        const filtered = results.filter(
+          (u) => u.handle !== user?.handle && !jurorHandles.includes(u.handle)
+        );
+        setSearchResults(filtered);
+      } catch (err) {
+        console.error("Search failed", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [activeJurorIndex, jurorHandles, user?.handle]);
 
   // Falsifiability warning — inline nudge (Design Doc §5.2)
   const showFalsifiabilityWarning =
@@ -253,16 +288,69 @@ export default function CreateCommitmentPage() {
               >
                 {i + 1}
               </div>
-              <input
-                className="input"
-                placeholder={`Juror ${i + 1} handle`}
-                value={handle}
-                onChange={(e) => {
-                  const updated = [...jurorHandles];
-                  updated[i] = e.target.value;
-                  setJurorHandles(updated);
-                }}
-              />
+              <div style={{ flex: 1, position: "relative" }}>
+                <input
+                  className="input"
+                  placeholder={`Juror ${i + 1} handle`}
+                  value={handle}
+                  onFocus={() => setActiveJurorIndex(i)}
+                  onBlur={() => {
+                    // Delay hiding so clicks on dropdown can register
+                    setTimeout(() => {
+                      if (activeJurorIndex === i) setActiveJurorIndex(null);
+                    }, 200);
+                  }}
+                  onChange={(e) => {
+                    const updated = [...jurorHandles];
+                    updated[i] = e.target.value.replace('@', ''); // prevent them from typing @ prefix accidentally
+                    setJurorHandles(updated);
+                    setActiveJurorIndex(i);
+                  }}
+                  style={{ width: "100%" }}
+                />
+                
+                {/* Autocomplete Dropdown */}
+                {activeJurorIndex === i && searchResults.length > 0 && (
+                  <div style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    marginTop: "4px",
+                    background: "var(--bg-surface-raised)",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: "8px",
+                    zIndex: 10,
+                    overflow: "hidden",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.5)"
+                  }}>
+                    {searchResults.map((userRes) => (
+                      <div
+                        key={userRes.id}
+                        onMouseDown={() => {
+                          const updated = [...jurorHandles];
+                          updated[i] = userRes.handle;
+                          setJurorHandles(updated);
+                          setSearchResults([]);
+                          setActiveJurorIndex(null);
+                        }}
+                        style={{
+                          padding: "12px 16px",
+                          cursor: "pointer",
+                          borderBottom: "1px solid var(--border-subtle)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-primary)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        <span style={{ fontWeight: 600 }}>@{userRes.handle}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {jurorHandles.length > 2 && (
                 <button
                   onClick={() =>

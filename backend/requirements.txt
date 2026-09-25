@@ -11,3 +11,19 @@ passlib[bcrypt]==1.7.4
 redis==5.1.0
 httpx==0.27.0
 python-multipart==0.0.12
+
+# Scheduling (deadline worker, jury selection, batch anchoring)
+APScheduler==3.11.3
+
+# Auth (Privy JWT verification via JWKS)
+PyJWT[crypto]==2.13.0
+
+# AI validation (Gemini structured output) — official SDK
+google-genai==2.22.0
+
+# Web3 anchoring on Polygon Amoy
+web3==7.14.0
+
+# Testing
+pytest==8.3.3
+pytest-asyncio==0.24.0

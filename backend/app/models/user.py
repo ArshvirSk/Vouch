@@ -18,13 +18,14 @@ class User(Base):
     handle: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     # Hybrid Auth Fields
+    privy_id: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
     wallet_address: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
     auth_provider: Mapped[str] = mapped_column(String, default="email", server_default=text("'email'"))
     reputation_score: Mapped[float] = mapped_column(
         Numeric(5, 2), default=0, server_default=text("0")
     )
     created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         server_default=text("now()"),
     )
     current_streak: Mapped[int] = mapped_column(default=0, server_default=text("0"))

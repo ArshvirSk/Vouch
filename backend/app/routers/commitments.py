@@ -42,6 +42,8 @@ def commitment_to_response(commitment: Commitment) -> CommitmentResponse:
         content_hash=commitment.content_hash,
         created_at=commitment.created_at,
         resolved_at=commitment.resolved_at,
+        is_public=commitment.is_public,
+        jury_pool_size=commitment.jury_pool_size,
         author=None,
         juror_count=len(commitment.jurors) if commitment.jurors else 0,
         evidence_count=len(commitment.evidence) if commitment.evidence else 0,
@@ -62,11 +64,14 @@ async def create_commitment(
     4. Inserts commitment + commitment_jurors rows
     """
     # Falsifiability check — TRD §4.1 step 2
-    check = await check_falsifiability(req.measurable_condition)
+    check = check_falsifiability(req.measurable_condition)
     if not check.is_falsifiable:
+        detail = "Commitment condition is not falsifiable: " + check.reason
+        if getattr(check, "suggested_rewrite", None):
+            detail += f"\nSuggested rewrite: {check.suggested_rewrite}"
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Commitment condition is not falsifiable: {check.reason}",
+            detail=detail,
         )
 
     # Validate deadline is in the future
@@ -78,20 +83,24 @@ async def create_commitment(
 
     # Validate juror handles — must exist, can't include author
     juror_users = []
-    for handle in req.juror_handles:
-        if handle == current_user.handle:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="You cannot be your own juror",
-            )
-        result = await db.execute(select(User).where(User.handle == handle))
-        juror = result.scalar_one_or_none()
-        if not juror:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Juror with handle '{handle}' not found",
-            )
-        juror_users.append(juror)
+    if not req.is_public:
+        if not (2 <= len(req.juror_handles) <= 5):
+            raise HTTPException(status_code=422, detail="Private commitments must have 2-5 jurors")
+            
+        for handle in req.juror_handles:
+            if handle == current_user.handle:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="You cannot be your own juror",
+                )
+            result = await db.execute(select(User).where(User.handle == handle))
+            juror = result.scalar_one_or_none()
+            if not juror:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Juror with handle '{handle}' not found",
+                )
+            juror_users.append(juror)
 
     # Compute content hash — TRD §3
     content_hash = compute_content_hash(
@@ -104,8 +113,10 @@ async def create_commitment(
         title=req.title,
         description=req.description,
         measurable_condition=req.measurable_condition,
-        deadline=req.deadline,
+        deadline=req.deadline.replace(tzinfo=None),
         content_hash=content_hash,
+        is_public=req.is_public,
+        jury_pool_size=req.jury_pool_size if req.is_public else None
     )
     db.add(commitment)
     await db.flush()  # Get the ID

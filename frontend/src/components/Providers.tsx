@@ -13,9 +13,14 @@ export function Web3Providers({ children }: { children: React.ReactNode }) {
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || "clkx6l5z8000rl108269y7311"}
       config={{
         loginMethods: ["wallet", "email"],
+        embeddedWallets: {
+          ethereum: {
+            createOnLogin: "users-without-wallets",
+          },
+        },
         appearance: {
-          theme: "light",
-          accentColor: "#4f46e5",
+          theme: "dark",
+          accentColor: "#f97316",
           logo: "https://vouch.app/logo.png",
         },
       }}

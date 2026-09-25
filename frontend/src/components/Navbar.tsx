@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { NotificationBell } from "./NotificationBell";
 
 export function Navbar() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, login, logout, isAuthenticated } = useAuth();
 
   return (
     <nav className="nav">
@@ -23,6 +23,16 @@ export function Navbar() {
       </Link>
 
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <Link
+          href="/explore"
+          style={{
+            color: "var(--text-secondary)",
+            textDecoration: "none",
+            fontSize: "var(--font-body)",
+          }}
+        >
+          Explore
+        </Link>
         {isAuthenticated ? (
           <>
             <NotificationBell />
@@ -52,13 +62,13 @@ export function Navbar() {
             </button>
           </>
         ) : (
-          <Link
-            href="/login"
+          <button
+            onClick={login}
             className="btn btn-primary"
             style={{ padding: "8px 18px", fontSize: "var(--font-caption)" }}
           >
             Sign In
-          </Link>
+          </button>
         )}
       </div>
     </nav>

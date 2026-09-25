@@ -36,7 +36,7 @@ class Vote(Base):
     vote: Mapped[VoteChoice] = mapped_column(Enum(VoteChoice, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     reason: Mapped[str | None] = mapped_column(String, nullable=True)
     voted_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         server_default=text("now()"),
     )
 

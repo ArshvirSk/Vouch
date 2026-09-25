@@ -1,12 +1,41 @@
+from contextlib import asynccontextmanager
+import asyncio
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from app.routers import commitments, evidence, votes, users, admin, notifications
+from app.routers import commitments, evidence, votes, users, admin, notifications, reports, jury_pool, auth
+from app.jobs.deadline_worker import process_deadlines
+from app.tasks.anchor import anchor_pending_commitments
+from app.tasks.jury_selection import select_public_juries
+
+logger = logging.getLogger(__name__)
+
+scheduler = AsyncIOScheduler()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup/shutdown lifecycle — starts the deadline scheduler."""
+    scheduler.add_job(process_deadlines, "interval", minutes=5, id="deadline_worker")
+    scheduler.add_job(select_public_juries, "interval", minutes=15, id="jury_selection")
+    scheduler.add_job(anchor_pending_commitments, "interval", minutes=60, id="anchor_batch")
+    scheduler.start()
+    logger.info("Deadline scheduler started (every 5 minutes)")
+    logger.info("Jury selection scheduler started (every 15 minutes)")
+    logger.info("Batch anchoring scheduler started (every 60 minutes)")
+    yield
+    scheduler.shutdown()
+    logger.info("Deadline scheduler stopped")
+
 
 app = FastAPI(
     title="Vouch API",
-    description="Decentralized accountability platform — MVP Phase 1",
-    version="0.1.0",
+    description="Decentralized accountability platform",
+    version="0.5.0",
+    lifespan=lifespan,
 )
 
 # CORS for Next.js frontend
@@ -25,8 +54,11 @@ app.include_router(votes.router)
 app.include_router(users.router)
 app.include_router(admin.router)
 app.include_router(notifications.router)
+app.include_router(reports.router)
+app.include_router(jury_pool.router)
+app.include_router(auth.router)
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "0.1.0"}
+    return {"status": "ok", "version": "0.5.0"}

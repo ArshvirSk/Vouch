@@ -109,15 +109,19 @@ export default function HomePage() {
       ) : commitments.length === 0 ? (
         <div
           style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
             textAlign: "center",
-            padding: "60px 0",
+            padding: "60px 20px",
             color: "var(--text-secondary)",
           }}
         >
-          <p style={{ fontSize: "var(--font-subtitle)", marginBottom: "8px" }}>
+          <p style={{ fontSize: "var(--font-subtitle)", marginBottom: "8px", color: "var(--text-primary)" }}>
             No commitments yet
           </p>
-          <p>Create your first commitment to get started.</p>
+          <p style={{ margin: 0 }}>Create your first commitment to get started.</p>
         </div>
       ) : (
         commitments.map((c) => <CommitmentCard key={c.id} commitment={c} />)
@@ -141,6 +145,9 @@ function getDemoCommitments(): Commitment[] {
       content_hash: "demo",
       created_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
       resolved_at: null,
+      onchain_tx_hash: null,
+      is_public: false,
+      jury_pool_size: null,
       juror_count: 3,
       evidence_count: 2,
     },
@@ -155,6 +162,9 @@ function getDemoCommitments(): Commitment[] {
       content_hash: "demo",
       created_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
       resolved_at: null,
+      onchain_tx_hash: null,
+      is_public: false,
+      jury_pool_size: null,
       juror_count: 2,
       evidence_count: 5,
     },
@@ -169,6 +179,9 @@ function getDemoCommitments(): Commitment[] {
       content_hash: "demo",
       created_at: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
       resolved_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      onchain_tx_hash: null,
+      is_public: false,
+      jury_pool_size: null,
       juror_count: 4,
       evidence_count: 3,
     },
@@ -183,6 +196,9 @@ function getDemoCommitments(): Commitment[] {
       content_hash: "demo",
       created_at: new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString(),
       resolved_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      onchain_tx_hash: null,
+      is_public: false,
+      jury_pool_size: null,
       juror_count: 3,
       evidence_count: 4,
     },
@@ -197,6 +213,9 @@ function getDemoCommitments(): Commitment[] {
       content_hash: "demo",
       created_at: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString(),
       resolved_at: null,
+      onchain_tx_hash: null,
+      is_public: false,
+      jury_pool_size: null,
       juror_count: 5,
       evidence_count: 6,
     },

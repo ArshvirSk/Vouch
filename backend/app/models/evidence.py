@@ -34,7 +34,7 @@ class Evidence(Base):
     content: Mapped[str] = mapped_column(String, nullable=False)  # URL, storage path, or raw text
     content_hash: Mapped[str] = mapped_column(String, nullable=False)
     submitted_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         server_default=text("now()"),
     )
 

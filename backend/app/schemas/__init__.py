@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, model_validator
 
 
 # ──────────────────────────────────────────────
@@ -42,7 +42,23 @@ class CommitmentCreate(BaseModel):
     description: str | None = None
     measurable_condition: str = Field(..., min_length=1)
     deadline: datetime
-    juror_handles: list[str] = Field(..., min_length=2, max_length=5)
+    juror_handles: list[str] = Field(default_factory=list)
+    is_public: bool = False
+    jury_pool_size: int | None = Field(None, ge=3, description="Minimum 3 for public pools")
+
+    @model_validator(mode="after")
+    def validate_juror_handles(self) -> "CommitmentCreate":
+        """Enforce juror requirements by commitment visibility.
+
+        Private commitments need exactly 2-5 named jurors; public commitments
+        draw from an open pool and must declare a pool size instead.
+        """
+        if self.is_public:
+            if self.jury_pool_size is None:
+                raise ValueError("Public commitments must specify jury_pool_size (minimum 3)")
+        elif not (2 <= len(self.juror_handles) <= 5):
+            raise ValueError("Private commitments must name 2-5 jurors")
+        return self
 
 
 class CommitmentResponse(BaseModel):
@@ -56,6 +72,8 @@ class CommitmentResponse(BaseModel):
     content_hash: str
     created_at: datetime
     resolved_at: datetime | None
+    is_public: bool = False
+    jury_pool_size: int | None = None
     author: UserPublic | None = None
     juror_count: int = 0
     evidence_count: int = 0
@@ -136,5 +154,11 @@ class ReputationHistoryResponse(BaseModel):
 # ──────────────────────────────────────────────
 
 class FalsifiabilityResult(BaseModel):
+    """Result of an LLM falsifiability check (also used as the Gemini
+    structured-output schema, hence the strict extra="forbid")."""
+
+    model_config = ConfigDict(extra="forbid")
+
     is_falsifiable: bool
     reason: str
+    suggested_rewrite: str | None = None
