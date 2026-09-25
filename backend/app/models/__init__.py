@@ -5,6 +5,7 @@ from app.models.vote import Vote, VoteChoice
 from app.models.reputation import ReputationEvent, ReputationReason
 from app.models.notification import Notification, NotificationType
 from app.models.report import Report
+from app.models.dao import DaoProposal, DaoProposalStatus
 from app.models.source import (
     SourceDocument,
     SourceType,
@@ -37,4 +38,6 @@ __all__ = [
     "ExtractionStatus",
     "ContradictionFlag",
     "ContradictionStatus",
+    "DaoProposal",
+    "DaoProposalStatus",
 ]

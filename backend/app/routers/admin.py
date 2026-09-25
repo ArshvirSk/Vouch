@@ -13,6 +13,7 @@ from app.jobs.deadline_checker import check_deadlines
 from app.jobs.reputation_recompute import run_reputation_recompute
 from app.tasks.anchor import anchor_pending_commitments
 from app.tasks.jury_selection import select_public_juries
+from app.tasks.anchor_reputation import anchor_reputations
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -44,3 +45,14 @@ async def run_phase5_jobs():
     await select_public_juries()
     await anchor_pending_commitments()
     return {"status": "ok"}
+
+
+@router.post("/run-phase3-jobs")
+async def run_phase3_jobs():
+    """Manually trigger the Phase 3 on-chain jobs (own sessions):
+
+    - anchor_reputations: recomputes reputation scores and publishes
+      backend-signed attestations to the VouchReputation contract.
+    """
+    result = await anchor_reputations()
+    return {"status": "ok", **result}

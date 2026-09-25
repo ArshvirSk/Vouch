@@ -6,10 +6,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from app.routers import commitments, evidence, votes, users, admin, notifications, reports, jury_pool, auth, sources
+from app.routers import commitments, evidence, votes, users, admin, notifications, reports, jury_pool, auth, sources, dao
 from app.jobs.deadline_worker import process_deadlines
 from app.tasks.anchor import anchor_pending_commitments
 from app.tasks.jury_selection import select_public_juries
+from app.tasks.anchor_reputation import anchor_reputations
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +23,12 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(process_deadlines, "interval", minutes=5, id="deadline_worker")
     scheduler.add_job(select_public_juries, "interval", minutes=15, id="jury_selection")
     scheduler.add_job(anchor_pending_commitments, "interval", minutes=60, id="anchor_batch")
+    scheduler.add_job(anchor_reputations, "interval", minutes=60, id="anchor_reputation")
     scheduler.start()
     logger.info("Deadline scheduler started (every 5 minutes)")
     logger.info("Jury selection scheduler started (every 15 minutes)")
     logger.info("Batch anchoring scheduler started (every 60 minutes)")
+    logger.info("Reputation anchoring scheduler started (every 60 minutes)")
     yield
     scheduler.shutdown()
     logger.info("Deadline scheduler stopped")
@@ -58,6 +61,7 @@ app.include_router(reports.router)
 app.include_router(jury_pool.router)
 app.include_router(auth.router)
 app.include_router(sources.router)
+app.include_router(dao.router)
 
 
 @app.get("/health")

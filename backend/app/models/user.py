@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Numeric, text
+from sqlalchemy import String, Numeric, text, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -31,6 +31,11 @@ class User(Base):
     current_streak: Mapped[int] = mapped_column(default=0, server_default=text("0"))
     longest_streak: Mapped[int] = mapped_column(default=0, server_default=text("0"))
     is_moderator: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
+
+    # Phase 3: native on-chain reputation attestation state
+    onchain_score: Mapped[float | None] = mapped_column(nullable=True)
+    onchain_tx_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    onchain_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     commitments = relationship("Commitment", back_populates="author", lazy="selectin")
