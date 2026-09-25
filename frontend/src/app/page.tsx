@@ -73,9 +73,9 @@ export default function HomePage() {
   }, [activeFilter]);
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start" }}>
-      {/* Main column */}
-      <div className="shell-content" style={{ maxWidth: "860px" }}>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+      {/* Main column — fills the space between sidebar and right rail */}
+      <div className="shell-content" style={{ flex: 1, minWidth: 0, maxWidth: "none" }}>
       <HeroBanner />
 
       {/* Recent Commitments header */}

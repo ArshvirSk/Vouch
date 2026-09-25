@@ -21,18 +21,6 @@ export function HeroBanner() {
 
   return (
     <div style={{ position: "relative", marginBottom: "28px" }}>
-      {/* Ambient orange glow behind the card — matches the reference halo */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: "-28px -20px -12px",
-          background:
-            "radial-gradient(58% 130% at 60% -10%, rgba(255,107,53,0.32) 0%, rgba(255,107,53,0.12) 40%, rgba(255,107,53,0.0) 72%)",
-          filter: "blur(22px)",
-          pointerEvents: "none",
-        }}
-      />
       <div
         style={{
           position: "relative",
@@ -42,21 +30,39 @@ export function HeroBanner() {
           display: "flex",
           alignItems: "center",
           border: "1px solid var(--border-subtle)",
-          boxShadow: "0 0 40px rgba(255, 107, 53, 0.10)",
         }}
       >
-      {/* Banner image */}
-      <img
-        src="/assets/mumbai-hero-banner.png"
-        alt="Mumbai skyline at dusk"
+      {/* Banner image with the glow radiating from behind it (right side,
+          matching the reference's halo around the Gateway of India) */}
+      <div
         style={{
           position: "absolute",
           inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
+          pointerEvents: "none",
         }}
-      />
+      >
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: "-40px -60px -40px 30%",
+            background:
+              "radial-gradient(55% 120% at 70% 40%, rgba(255,107,53,0.35) 0%, rgba(255,107,53,0.14) 45%, rgba(255,107,53,0) 75%)",
+            filter: "blur(26px)",
+          }}
+        />
+        <img
+          src="/assets/mumbai-hero-banner.png"
+          alt="Mumbai skyline at dusk"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+          }}
+        />
+      </div>
 
       {/* Dark-to-transparent gradient overlay (left dark for legibility) */}
       <div
