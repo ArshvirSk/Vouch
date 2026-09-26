@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 import { AuthProvider } from "@/lib/auth-context";
+import { AreaProvider } from "@/lib/area-context";
+import { GeoDevStub } from "@/lib/geo-dev-stub";
 import { Web3Providers } from "@/components/Providers";
 
 const inter = Inter({
@@ -21,9 +23,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
       <body className="min-h-full flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <GeoDevStub />
         <Web3Providers>
           <AuthProvider>
-            <AppShell>{children}</AppShell>
+            <AreaProvider>
+              <AppShell>{children}</AppShell>
+            </AreaProvider>
           </AuthProvider>
         </Web3Providers>
       </body>

@@ -464,6 +464,8 @@ function getDemoProfile(handle: string): UserProfile {
       jury_accuracy: 85.7,
       total_votes_cast: 14,
       partner_count: 5,
+      evidence_submitted: 9,
+      commitments_authored: 8,
     },
   };
 }

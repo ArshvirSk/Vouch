@@ -2,23 +2,26 @@
 
 import { useState, useEffect } from "react";
 import { getUnreadNotifications, markNotificationAsRead, type Notification } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { formatDate } from "@/lib/utils";
 import { Bell } from "lucide-react";
 
 export function NotificationBell() {
+  const { isAuthenticated } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
+
     async function loadNotifications() {
-      const token = localStorage.getItem("vouch_token");
-      if (!token) {
-        setLoading(false);
-        return;
-      }
       try {
-        const data = await getUnreadNotifications(token);
+        const data = await getUnreadNotifications();
         setNotifications(data);
       } catch (err) {
         console.error("Failed to load notifications", err);
@@ -31,13 +34,11 @@ export function NotificationBell() {
     // Poll every 30 seconds
     const interval = setInterval(loadNotifications, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isAuthenticated]);
 
   const handleMarkAsRead = async (id: string) => {
-    const token = localStorage.getItem("vouch_token");
-    if (!token) return;
     try {
-      await markNotificationAsRead(id, token);
+      await markNotificationAsRead(id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch (err) {
       console.error("Failed to mark as read", err);

@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from app.routers import commitments, evidence, votes, users, admin, notifications, reports, jury_pool, auth, sources, dao, milestones
+from app.routers import commitments, evidence, votes, users, admin, notifications, reports, jury_pool, auth, sources, dao, milestones, area
 from app.jobs.deadline_worker import process_deadlines
 from app.tasks.anchor import anchor_pending_commitments
 from app.tasks.jury_selection import select_public_juries
@@ -70,6 +70,7 @@ app.include_router(auth.router)
 app.include_router(sources.router)
 app.include_router(dao.router)
 app.include_router(milestones.router)
+app.include_router(area.router)
 
 
 @app.get("/health")

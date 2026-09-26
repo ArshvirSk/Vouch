@@ -3,10 +3,11 @@
 /**
  * HomeRightRail — redesign stage 4. Home-only right column:
  * - Quick Create: two rows linking into /create?type=civic|vendor
- * - Your Impact: 2x2 stat grid (reputation + juror votes are real backend
- *   fields; contributions + promises tracked are placeholders pending
- *   backend work — flagged in code)
- * - Active in Your Area: map widget with civic/vendor pin clusters + stats
+ * - Your Impact: 2x2 stat grid — all four values are real backend fields
+ *   (profile stats: evidence_submitted / total_votes_cast /
+ *   commitments_authored / reputation_score)
+ * - Active in Your Area: real Leaflet map (shared VouchMap component) with
+ *   civic/vendor pins + stats from GET /area/activity (ward-scoped counts)
  */
 
 import Link from "next/link";
@@ -20,12 +21,23 @@ import {
   BarChart3,
   Star,
   MapPin,
+  ChevronDown,
 } from "lucide-react";
-import { getUserProfile } from "@/lib/api";
+import { getUserProfile, getAreaActivity } from "@/lib/api";
+import { VouchMap } from "@/components/VouchMap";
+import {
+  PILOT_WARDS,
+  useSelectedArea,
+  areaActivityParams,
+  pilotWard,
+} from "@/lib/area-context";
+import { LocateFixed } from "lucide-react";
 
 const REFRESH_MS = 60_000;
 
 export function HomeRightRail() {
+  const { area, deviceLocation, setWard, requestLocation, geoStatus, ready: areaReady } = useSelectedArea();
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [stats, setStats] = useState({
     contributions: 0,
     jurorVotes: 0,
@@ -33,6 +45,12 @@ export function HomeRightRail() {
     reputation: 0,
   });
   const [loaded, setLoaded] = useState(false);
+  const [areaData, setAreaData] = useState<{
+    civic: number;
+    vendor: number;
+    inVerification: number;
+    pins: Parameters<typeof VouchMap>[0]["pins"];
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,15 +61,13 @@ export function HomeRightRail() {
         const profile = await getUserProfile(handle);
         if (cancelled) return;
         setStats({
-          // Real backend field
-          reputation: profile.user.reputation_score ?? 0,
+          // Evidence submissions by this user (backend: evidence_submitted)
+          contributions: profile.stats.evidence_submitted ?? 0,
           // Real backend field
           jurorVotes: profile.stats.total_votes_cast ?? 0,
-          // PLACEHOLDER: no backend field yet — contributions = distinct
-          // evidence submissions is the intended definition (stage 4 backend)
-          contributions: profile.stats.commitments_total ?? 0,
-          // PLACEHOLDER: promises tracked = commitments authored so far
-          promisesTracked: profile.stats.commitments_total ?? 0,
+          // Commitments authored by this user (backend: commitments_authored)
+          promisesTracked: profile.stats.commitments_authored ?? 0,
+          reputation: profile.user.reputation_score ?? 0,
         });
       } catch {
         /* keep zeros */
@@ -66,6 +82,33 @@ export function HomeRightRail() {
       clearInterval(t);
     };
   }, []);
+
+  // Area activity — real query backing the map pins + stat row. Queries by
+  // ward when the area snapped to a pilot ward, by coordinates otherwise.
+  useEffect(() => {
+    if (!areaReady) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await getAreaActivity(areaActivityParams(area));
+        if (cancelled) return;
+        setAreaData({
+          civic: data.civic_count,
+          vendor: data.vendor_count,
+          inVerification: data.in_verification_count,
+          pins: data.pins,
+        });
+      } catch {
+        if (!cancelled) setAreaData(null);
+      }
+    }
+    load();
+    const t = setInterval(load, REFRESH_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [areaReady, area.ward, area.lat, area.lng]);
 
   return (
     <aside
@@ -197,14 +240,13 @@ export function HomeRightRail() {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
           {[
-            { icon: ClipboardList, value: stats.contributions, label: "Contributions", real: false },
-            { icon: Vote, value: stats.jurorVotes, label: "Juror votes", real: true },
-            { icon: BarChart3, value: stats.promisesTracked, label: "Promises tracked", real: false },
-            { icon: Star, value: stats.reputation, label: "Reputation score", real: true },
-          ].map(({ icon: Icon, value, label, real }) => (
+            { icon: ClipboardList, value: stats.contributions, label: "Contributions" },
+            { icon: Vote, value: stats.jurorVotes, label: "Juror votes" },
+            { icon: BarChart3, value: stats.promisesTracked, label: "Promises tracked" },
+            { icon: Star, value: stats.reputation, label: "Reputation score" },
+          ].map(({ icon: Icon, value, label }) => (
             <div
               key={label}
-              title={real ? undefined : `${label}: placeholder — backend field pending`}
               style={{
                 border: "1px solid var(--border-subtle)",
                 borderRadius: "12px",
@@ -237,7 +279,10 @@ export function HomeRightRail() {
           </h3>
           <a
             href="#"
-            onClick={(e) => e.preventDefault()}
+            onClick={(e) => {
+              e.preventDefault();
+              setPickerOpen((v) => !v);
+            }}
             style={{
               color: "var(--accent-primary)",
               textDecoration: "none",
@@ -250,6 +295,7 @@ export function HomeRightRail() {
         </div>
         <div
           style={{
+            position: "relative",
             display: "flex",
             alignItems: "center",
             gap: "6px",
@@ -258,10 +304,100 @@ export function HomeRightRail() {
             marginBottom: "12px",
           }}
         >
-          <MapPin size={13} /> Bandra West, Mumbai
+          <MapPin size={13} /> {area.label}
+          {area.source === "geo" && (
+            <span
+              title="Set from your device location — change any time"
+              style={{
+                fontSize: "9px",
+                color: "var(--accent-primary)",
+                border: "1px solid rgba(255, 107, 53, 0.35)",
+                borderRadius: "100px",
+                padding: "1px 7px",
+              }}
+            >
+              GPS
+            </span>
+          )}
+
+          {/* Ward picker — manual override; location sets the default only */}
+          {pickerOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                zIndex: 30,
+                minWidth: "220px",
+                maxHeight: "340px",
+                overflowY: "auto",
+                background: "var(--bg-surface-raised)",
+                border: "1px solid var(--border-color)",
+                borderRadius: "10px",
+                boxShadow: "0 6px 20px rgba(0,0,0,0.5)",
+                marginTop: "4px",
+              }}
+            >
+              {geoStatus !== "granted" && area.source !== "geo" && (
+                <button
+                  onClick={() => {
+                    requestLocation();
+                    setPickerOpen(false);
+                  }}
+                  disabled={geoStatus === "locating"}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "10px 14px",
+                    background: "transparent",
+                    color: "var(--accent-primary)",
+                    border: "none",
+                    borderBottom: "1px solid var(--border-subtle)",
+                    cursor: "pointer",
+                    fontSize: "var(--font-caption)",
+                    fontWeight: 600,
+                    opacity: geoStatus === "locating" ? 0.6 : 1,
+                  }}
+                >
+                  <LocateFixed size={14} /> Use my location
+                </button>
+              )}
+              {PILOT_WARDS.map((w) => {
+                const active = area.ward === w.ward || (pilotWard(area.ward)?.ward === w.ward && area.source === "geo");
+                return (
+                <button
+                  key={w.ward}
+                  onClick={() => {
+                    setWard(w.ward);
+                    setPickerOpen(false);
+                  }}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "10px 14px",
+                    background:
+                      active ? "rgba(255, 107, 53, 0.12)" : "transparent",
+                    color: active ? "var(--accent-primary)" : "var(--text-primary)",
+                    border: "none",
+                    borderBottom: "1px solid var(--border-subtle)",
+                    cursor: "pointer",
+                    fontSize: "var(--font-caption)",
+                  }}
+                >
+                  {w.label}
+                </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Map widget with pin clusters (static stand-in — no map SDK yet) */}
+        {/* Real map preview — pins at their actual lat/lng via shared VouchMap.
+            Non-interactive: this is a sidebar glance, not the main event. */}
         <div
           style={{
             position: "relative",
@@ -269,56 +405,29 @@ export function HomeRightRail() {
             borderRadius: "12px",
             overflow: "hidden",
             border: "1px solid var(--border-subtle)",
-            background:
-              "linear-gradient(135deg, #1A1C24 0%, #22242E 60%, #1A1C24 100%)",
           }}
         >
-          {/* Faint street-grid hint */}
-          <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, opacity: 0.25 }}>
-            <path d="M0 40 L300 60" stroke="var(--border-subtle)" strokeWidth="2" />
-            <path d="M0 100 L300 90" stroke="var(--border-subtle)" strokeWidth="2" />
-            <path d="M80 0 L110 150" stroke="var(--border-subtle)" strokeWidth="2" />
-            <path d="M200 0 L180 150" stroke="var(--border-subtle)" strokeWidth="2" />
-          </svg>
-
-          {[
-            { x: "22%", y: "30%", kind: "civic" },
-            { x: "58%", y: "22%", kind: "vendor" },
-            { x: "44%", y: "58%", kind: "vendor" },
-            { x: "74%", y: "62%", kind: "civic" },
-          ].map((pin, i) => (
-            <span
-              key={i}
-              style={{
-                position: "absolute",
-                left: pin.x,
-                top: pin.y,
-                width: "26px",
-                height: "26px",
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background:
-                  pin.kind === "civic"
-                    ? "var(--accent-primary)"
-                    : "var(--accent-verified)",
-                color: "#0E0F14",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
-              }}
-              title={pin.kind === "civic" ? "Civic commitment" : "Vendor commitment"}
-            >
-              {pin.kind === "civic" ? <Landmark size={13} /> : <Briefcase size={13} />}
-            </span>
-          ))}
+          <VouchMap
+            pins={areaReady && areaData ? areaData.pins : []}
+            // Centre on the device fix when known so the blue "you are
+            // here" dot sits mid-panel, not wherever the ward centroid is.
+            center={
+              deviceLocation
+                ? [deviceLocation.lat, deviceLocation.lng]
+                : [area.lat, area.lng]
+            }
+            zoom={14}
+            interactive={false}
+            userLocation={areaReady ? deviceLocation : null}
+          />
         </div>
 
-        {/* Area stat row (placeholder counts until a ward-scoped query exists) */}
+        {/* Area stat row — real ward-scoped counts from /area/activity */}
         <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
           {[
-            { value: 18, label: "Civic promises" },
-            { value: 27, label: "Vendors" },
-            { value: 5, label: "In verification" },
+            { value: areaData?.civic ?? "–", label: "Civic promises" },
+            { value: areaData?.vendor ?? "–", label: "Vendors" },
+            { value: areaData?.inVerification ?? "–", label: "In verification" },
           ].map(({ value, label }) => (
             <div
               key={label}

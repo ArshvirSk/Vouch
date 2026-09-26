@@ -1,0 +1,168 @@
+/**
+ * VouchMap styles — Leaflet chrome re-themed to Vouch's dark tokens.
+ * The base leaflet.css is imported in VouchMap.tsx.
+ */
+
+.vouch-map {
+  width: 100%;
+  height: 100%;
+  background: #1a1c24; /* matches the old static-widget gradient base */
+  font-family: inherit;
+  z-index: 0;
+}
+
+/* Marker wrapper divs — Leaflet positions them, we keep them borderless. */
+.vouch-pin-wrapper {
+  background: transparent;
+  border: none;
+}
+
+/* ── "You are here" device-location dot ───────────────────────── */
+.vouch-user-dot {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #4da3ff; /* location blue — reads as GPS, distinct from pins */
+  border: 3px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  position: relative;
+}
+
+.vouch-user-dot::after {
+  content: "";
+  position: absolute;
+  inset: -10px; /* halo extends past the dot */
+  border-radius: 50%;
+  border: 2px solid rgba(77, 163, 255, 0.7);
+  animation: vouch-pulse 2.2s ease-out infinite;
+}
+
+@keyframes vouch-pulse {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vouch-user-dot::after {
+    animation: none;
+    opacity: 0.4;
+  }
+}
+
+/* The circular pins use CSS var() colors, which don't survive SVG
+   serialization outside the DOM — vars resolve fine because the icon html
+   is injected into the page. Nothing to do here beyond transparency. */
+
+/* ── Popups: match the app's card look ─────────────────────────── */
+.leaflet-popup-content-wrapper {
+  background: var(--bg-surface-raised, #22242e);
+  color: var(--text-primary, #f5f6f8);
+  border: 1px solid var(--border-subtle, #2e3140);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px;
+  line-height: 1.4;
+  min-width: 180px;
+}
+
+.leaflet-popup-tip {
+  background: var(--bg-surface-raised, #22242e);
+  border: 1px solid var(--border-subtle, #2e3140);
+}
+
+.leaflet-popup-close-button {
+  color: var(--text-secondary, #9aa0ad) !important;
+}
+
+.vouch-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vouch-popup .verdict-badge {
+  align-self: flex-start;
+  font-size: 10px;
+}
+
+.vouch-popup-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #f5f6f8);
+}
+
+.vouch-popup-ward {
+  font-size: 11px;
+  color: var(--text-secondary, #9aa0ad);
+}
+
+.vouch-popup-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-primary, #ff6b35);
+  text-decoration: none;
+  margin-top: 2px;
+}
+
+.vouch-popup-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Locate-me control (interactive maps) ─────────────────────── */
+.vouch-locate-btn {
+  position: absolute;
+  right: 10px;
+  bottom: 92px; /* above the zoom +/- stack */
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle, #2e3140);
+  background: var(--bg-surface-raised, #22242e);
+  color: var(--text-primary, #f5f6f8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.vouch-locate-btn:hover {
+  color: var(--accent-primary, #ff6b35);
+  border-color: var(--accent-primary, #ff6b35);
+}
+
+/* ── Attribution + zoom control: dim to match the theme ────────── */
+.leaflet-control-attribution {
+  background: rgba(26, 28, 36, 0.8) !important;
+  color: var(--text-secondary, #9aa0ad) !important;
+  font-size: 9px !important;
+}
+
+.leaflet-control-attribution a {
+  color: var(--text-secondary, #9aa0ad) !important;
+}
+
+.leaflet-bar a {
+  background: var(--bg-surface-raised, #22242e) !important;
+  color: var(--text-primary, #f5f6f8) !important;
+  border-color: var(--border-subtle, #2e3140) !important;
+}
+
+.leaflet-bar a:hover {
+  background: var(--bg-primary, #16171d) !important;
+}

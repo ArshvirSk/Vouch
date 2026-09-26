@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.user import User
 from app.models.commitment import Commitment, CommitmentStatus, CommitmentJuror
+from app.models.evidence import Evidence
 from app.models.vote import Vote, VoteChoice
 from app.models.reputation import ReputationEvent
 from app.schemas import UserPublic, ReputationEventResponse, ReputationHistoryResponse
@@ -91,6 +92,25 @@ async def get_user_profile(
     )
     partner_count = partners_result.scalar() or 0
 
+    # India PRD — "Your Impact" stats (distinct definitions):
+    # contributions = evidence this user has submitted, across all
+    # commitments (not just their own) — PRD §7 evidence flow
+    contributions_result = await db.execute(
+        select(func.count()).select_from(Evidence).where(
+            Evidence.submitter_id == user.id
+        )
+    )
+    contributions = contributions_result.scalar() or 0
+
+    # promises_tracked = commitments this user has authored, any status —
+    # everything they've put on the record
+    promises_tracked_result = await db.execute(
+        select(func.count()).select_from(Commitment).where(
+            Commitment.author_id == user.id
+        )
+    )
+    promises_tracked = promises_tracked_result.scalar() or 0
+
     return {
         "user": UserPublic.model_validate(user).model_dump(),
         "stats": {
@@ -100,6 +120,8 @@ async def get_user_profile(
             "jury_accuracy": round(jury_accuracy, 1),
             "total_votes_cast": total_votes,
             "partner_count": partner_count,
+            "evidence_submitted": contributions,
+            "commitments_authored": promises_tracked,
         },
     }
 

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { usePrivy } from "@privy-io/react-auth";
-import { syncPrivyUser } from "./api"; // We will add this to api.ts
+import { syncPrivyUser, setApiTokenProvider } from "./api";
 
 interface AuthUser {
   id: string; // The database UUID
@@ -32,6 +32,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
+  // Resolve the JWT at request time via Privy (which refreshes expired tokens
+  // on demand) instead of caching one in localStorage. Also clears any legacy
+  // cached token from before this change.
+  useEffect(() => {
+    setApiTokenProvider(async () => {
+      try {
+        return await getAccessToken();
+      } catch {
+        return null;
+      }
+    });
+    localStorage.removeItem("vouch_token");
+  }, [getAccessToken]);
+
   useEffect(() => {
     async function sync() {
       if (!ready) return;
@@ -48,7 +62,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (cachedHandle && cachedUserId) {
             setUser({ id: cachedUserId, handle: cachedHandle, token });
-            localStorage.setItem("vouch_token", token);
           } else {
             // Need to sync with backend to get the UUID and handle
             // If the user doesn't exist yet, we can't create them without a handle.
@@ -62,7 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const response = await syncPrivyUser(fallbackHandle, email, wallet, token);
             
             setUser({ id: response.user_id, handle: response.handle, token });
-            localStorage.setItem("vouch_token", token);
             localStorage.setItem("vouch_handle", response.handle);
             localStorage.setItem("vouch_user_id", response.user_id);
           }
@@ -75,7 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else if (!authenticated) {
         setUser(null);
-        localStorage.removeItem("vouch_token");
         localStorage.removeItem("vouch_handle");
         localStorage.removeItem("vouch_user_id");
         setLoading(false);

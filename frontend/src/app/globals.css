@@ -771,3 +771,12 @@ textarea.input {
   border-color: rgba(255, 107, 53, 0.35);
   transform: translateY(-1px);
 }
+
+/* Geolocation prompt spinner */
+.spin {
+  animation: vouch-spin 0.9s linear infinite;
+}
+@keyframes vouch-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

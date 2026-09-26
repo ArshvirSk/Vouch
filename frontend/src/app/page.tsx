@@ -12,6 +12,7 @@ import { CommitmentFeedCard } from "@/components/CommitmentFeedCard";
 import { getDemoCommitments } from "@/components/CommitmentListPage";
 import { HeroBanner } from "@/components/HeroBanner";
 import { HomeRightRail } from "@/components/HomeRightRail";
+import { LocationPrompt } from "@/components/LocationPrompt";
 
 /**
  * Filter row per the reference: "All" is a filled pill; the rest are text
@@ -91,6 +92,9 @@ export default function HomePage() {
         style={{ flex: "1 1 0%", maxWidth: "none", minWidth: 0, margin: 0, padding: "24px 0 0" }}
       >
         <HeroBanner />
+
+        {/* First-visit location consent — explanation before the browser dialog */}
+        <LocationPrompt />
 
         {/* Recent Commitments header */}
         <div

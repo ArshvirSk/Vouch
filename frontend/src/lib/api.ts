@@ -10,8 +10,33 @@ interface ApiOptions {
   token?: string | null;
 }
 
+/**
+ * Resolves the auth token at request time (e.g. Privy's getAccessToken, which
+ * refreshes expired tokens on demand) so long-lived clients never replay a
+ * cached, expired JWT.
+ */
+type TokenProvider = () => Promise<string | null>;
+let tokenProvider: TokenProvider | null = null;
+
+export function setApiTokenProvider(provider: TokenProvider | null) {
+  tokenProvider = provider;
+}
+
+async function resolveToken(explicit?: string | null): Promise<string | null> {
+  if (tokenProvider) {
+    try {
+      const token = await tokenProvider();
+      if (token) return token;
+    } catch {
+      // Fall through to the explicit token, if any.
+    }
+  }
+  return explicit ?? null;
+}
+
 async function apiFetch<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
-  const { method = "GET", body, token } = options;
+  const { method = "GET", body } = options;
+  const token = await resolveToken(options.token);
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -118,12 +143,14 @@ export async function listCommitments(params?: {
   status?: string;
   category?: string;
   ward?: string;
+  limit?: number;
 }) {
   const searchParams = new URLSearchParams();
   if (params?.author) searchParams.set("author", params.author);
   if (params?.status) searchParams.set("status", params.status);
   if (params?.category) searchParams.set("category", params.category);
   if (params?.ward) searchParams.set("ward", params.ward);
+  if (params?.limit) searchParams.set("limit", String(params.limit));
   const query = searchParams.toString();
   return apiFetch<{ commitments: Commitment[]; total: number }>(
     `/commitments${query ? `?${query}` : ""}`
@@ -198,6 +225,10 @@ export interface UserProfile {
     jury_accuracy: number;
     total_votes_cast: number;
     partner_count: number;
+    /** Evidence submissions by this user, across all commitments. */
+    evidence_submitted: number;
+    /** Commitments this user has authored (any status). */
+    commitments_authored: number;
   };
 }
 
@@ -212,6 +243,49 @@ export interface ReputationEvent {
 
 export async function getUserProfile(handle: string) {
   return apiFetch<UserProfile>(`/users/${handle}`);
+}
+
+// ─── Area activity (Active in Your Area) ─────────
+
+export interface AreaPin {
+  id: string;
+  category: "civic" | "vendor" | "personal";
+  title: string;
+  ward: string | null;
+  status: string;
+  lat: number;
+  lng: number;
+}
+
+export interface AreaActivity {
+  area: {
+    ward: string | null;
+    pincodes: string[];
+    center: { lat: number | null; lng: number | null };
+    radius_km: number;
+  };
+  civic_count: number;
+  vendor_count: number;
+  in_verification_count: number;
+  in_verification_civic: number;
+  in_verification_vendor: number;
+  pins: AreaPin[];
+}
+
+export async function getAreaActivity(
+  params: { ward?: string; pincode?: string; lat?: number; lng?: number; radius_km?: number; scale_km?: number }
+) {
+  const searchParams = new URLSearchParams();
+  if (params.ward) searchParams.set("ward", params.ward);
+  if (params.pincode) searchParams.set("pincode", params.pincode);
+  if (params.lat !== undefined && params.lng !== undefined) {
+    searchParams.set("lat", String(params.lat));
+    searchParams.set("lng", String(params.lng));
+  }
+  if (params.radius_km) searchParams.set("radius_km", String(params.radius_km));
+  if (params.scale_km) searchParams.set("scale_km", String(params.scale_km));
+  const query = searchParams.toString();
+  return apiFetch<AreaActivity>(`/area/activity${query ? `?${query}` : ""}`);
 }
 
 export async function getUserCommitments(handle: string) {
@@ -234,11 +308,11 @@ export interface Notification {
   created_at: string;
 }
 
-export async function getUnreadNotifications(token: string) {
+export async function getUnreadNotifications(token?: string | null) {
   return apiFetch<Notification[]>("/notifications", { token });
 }
 
-export async function markNotificationAsRead(id: string, token: string) {
+export async function markNotificationAsRead(id: string, token?: string | null) {
   return apiFetch<{ status: string }>(`/notifications/${id}/read`, {
     method: "POST",
     token,
