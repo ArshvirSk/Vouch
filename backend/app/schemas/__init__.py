@@ -126,6 +126,8 @@ class CommitmentListResponse(BaseModel):
 class EvidenceCreate(BaseModel):
     type: str = Field(..., pattern="^(link|image|text|onchain_tx)$")
     content: str = Field(..., min_length=1)
+    # Optional lifecycle tag for image evidence: 'before' | 'after'
+    phase: str | None = Field(None, pattern="^(before|after)$")
 
 
 class EvidenceResponse(BaseModel):
@@ -135,6 +137,7 @@ class EvidenceResponse(BaseModel):
     type: str
     content: str
     content_hash: str
+    phase: str | None = None
     submitted_at: datetime
     submitter: UserPublic | None = None
 

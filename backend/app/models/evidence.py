@@ -33,6 +33,9 @@ class Evidence(Base):
     type: Mapped[EvidenceType] = mapped_column(Enum(EvidenceType, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     content: Mapped[str] = mapped_column(String, nullable=False)  # URL, storage path, or raw text
     content_hash: Mapped[str] = mapped_column(String, nullable=False)
+    # Optional lifecycle tag for image evidence: 'before' | 'after' —
+    # powers the before/after comparison slider on the civic detail page.
+    phase: Mapped[str | None] = mapped_column(String(20), nullable=True)
     submitted_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
         server_default=text("now()"),

@@ -16,6 +16,7 @@ from app.models.user import User
 from app.models.commitment import Commitment, CommitmentStatus
 from app.models.evidence import Evidence, EvidenceType
 from app.schemas import EvidenceCreate, EvidenceResponse
+from app.services.verdict_history import record_snapshot
 
 router = APIRouter(prefix="/commitments", tags=["evidence"])
 
@@ -67,6 +68,7 @@ async def submit_evidence(
         type=EvidenceType(req.type),
         content=req.content,
         content_hash=content_hash,
+        phase=req.phase,
     )
     db.add(evidence)
 
@@ -74,6 +76,10 @@ async def submit_evidence(
     if commitment.status == CommitmentStatus.OPEN:
         commitment.status = CommitmentStatus.EVIDENCE_SUBMITTED
 
+    # Stage 2: snapshot on evidence events for the history chart.
+    await record_snapshot(
+        db, commitment_id, event_label="Evidence submitted", event_type="evidence"
+    )
     await db.commit()
     await db.refresh(evidence)
 
@@ -84,6 +90,7 @@ async def submit_evidence(
         type=evidence.type.value,
         content=evidence.content,
         content_hash=evidence.content_hash,
+        phase=evidence.phase,
         submitted_at=evidence.submitted_at,
     )
 
@@ -113,6 +120,7 @@ async def list_evidence(
             type=e.type.value,
             content=e.content,
             content_hash=e.content_hash,
+            phase=e.phase,
             submitted_at=e.submitted_at,
         )
         for e in evidence_list

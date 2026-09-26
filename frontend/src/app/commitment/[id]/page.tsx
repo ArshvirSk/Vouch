@@ -14,6 +14,7 @@ import {
 import { formatRelativeTime, formatDate, getStatusLabel, calcTimeProgress } from "@/lib/utils";
 import { VoteButtons } from "@/components/VoteButtons";
 import { castVote } from "@/lib/api";
+import { CivicDetailPage } from "@/components/civic/CivicDetailPage";
 import Link from "next/link";
 import { ArrowLeft, Check, X, Scale, ChevronDown, ChevronRight, Paperclip, Globe, Users } from "lucide-react";
 
@@ -150,6 +151,19 @@ export default function CommitmentDetailPage({
       >
         Commitment not found
       </div>
+    );
+  }
+
+  // Civic commitments get the enriched detail page (redesign); vendor and
+  // personal keep the existing simpler detail page untouched.
+  if (commitment.category === "civic") {
+    return (
+      <CivicDetailPage
+        commitment={commitment}
+        evidenceList={evidenceList}
+        voteResults={voteResults}
+        counts={{ news: 0, discussion: 0, related: 0 }}
+      />
     );
   }
 

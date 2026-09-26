@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.commitment import Commitment, CommitmentStatus, CommitmentJuror
 from app.models.vote import Vote, VoteChoice
 from app.models.reputation import ReputationEvent, ReputationReason
+from app.services.verdict_history import record_snapshot
 
 
 # Reputation deltas — kept simple and explainable per PRD §9
@@ -73,6 +74,13 @@ async def resolve_commitment(
     # Update commitment
     commitment.status = verdict
     commitment.resolved_at = now
+
+    # Stage 2: final tally marker for the verdict-over-time chart.
+    await record_snapshot(
+        db, commitment_id,
+        event_label=f"Jury verdict: {verdict.value}",
+        event_type="status",
+    )
 
     # Create reputation events — TRD §4.4
     if verdict in (CommitmentStatus.MET, CommitmentStatus.BROKEN):

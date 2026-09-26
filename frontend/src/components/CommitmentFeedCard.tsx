@@ -28,8 +28,8 @@ function thumbnailFor(c: Commitment): string {
     return "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=400&h=400&fit=crop";
   }
   if (c.category === "civic") {
-    // Road/infrastructure
-    return "https://images.unsplash.com/photo-1545558014-8692077e9b5c?w=400&h=400&fit=crop";
+    // Road/infrastructure construction
+    return "https://images.unsplash.com/photo-1503708928676-1cb796a0891e?w=400&h=400&fit=crop";
   }
   // Personal — study/desk
   return "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=400&h=400&fit=crop";

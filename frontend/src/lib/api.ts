@@ -166,12 +166,14 @@ export interface Evidence {
   type: string;
   content: string;
   content_hash: string;
+  /** Lifecycle tag for image evidence: 'before' | 'after' | null. */
+  phase?: string | null;
   submitted_at: string;
 }
 
 export async function submitEvidence(
   commitmentId: string,
-  data: { type: string; content: string },
+  data: { type: string; content: string; phase?: string | null },
   token: string
 ) {
   return apiFetch<Evidence>(`/commitments/${commitmentId}/evidence`, {
@@ -317,6 +319,29 @@ export async function markNotificationAsRead(id: string, token?: string | null) 
     method: "POST",
     token,
   });
+}
+
+// ─── Verdict history (Stage 2) ───────────────────
+
+export interface VerdictSnapshot {
+  id: string;
+  met: number;
+  broken: number;
+  abstain: number;
+  jurors: number;
+  event_label: string | null;
+  event_type: string;
+  created_at: string;
+}
+
+export interface VerdictHistoryData {
+  commitment_id: string;
+  juror_count: number;
+  snapshots: VerdictSnapshot[];
+}
+
+export async function getVerdictHistory(commitmentId: string) {
+  return apiFetch<VerdictHistoryData>(`/commitments/${commitmentId}/verdict-history`);
 }
 
 // ─── Evidence (List) ──────────────────────────────

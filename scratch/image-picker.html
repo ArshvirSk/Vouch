@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html><body style="background:#111;color:#eee;font-family:sans-serif;margin:0;padding:16px">
+<h3 style="margin:4px 0 12px">Candidate before/after images</h3>
+<script>
+const ids = [
+  "photo-1541888946425-d81bb19240f5",
+  "photo-1503387762-592deb58ef4e",
+  "photo-1581094794329-c8112a89af12",
+  "photo-1465447142348-e9952c393450",
+  "photo-1449824913935-59a10b8d2000",
+  "photo-1477959858617-67f85cf4f1df",
+  "photo-1494522855154-9297ac14b55f",
+  "photo-1519501025264-65ba15a82390",
+  "photo-1516569422572-d9e0514b9598",
+  "photo-1545558014-8692077e9b5c"
+];
+document.body.insertAdjacentHTML("beforeend", ids.map((id, i) =>
+  `<div style="display:inline-block;margin:8px;vertical-align:top;width:300px">
+    <img src="https://images.unsplash.com/${id}?w=300&h=180&fit=crop" style="width:300px;height:180px;object-fit:cover;display:block" onerror="this.style.border='3px solid red'"/>
+    <div style="font-size:11px;margin-top:4px">#${i} ${id}</div>
+  </div>`).join(""));
+</script>
+</body></html>

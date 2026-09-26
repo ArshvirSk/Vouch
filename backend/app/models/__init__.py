@@ -2,6 +2,7 @@ from app.models.user import User
 from app.models.commitment import Commitment, CommitmentJuror, CommitmentStatus, JuryPool
 from app.models.evidence import Evidence, EvidenceType
 from app.models.vote import Vote, VoteChoice
+from app.models.verdict_history import VerdictHistory
 from app.models.reputation import ReputationEvent, ReputationReason
 from app.models.notification import Notification, NotificationType
 from app.models.report import Report

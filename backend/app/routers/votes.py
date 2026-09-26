@@ -16,6 +16,7 @@ from app.models.commitment import Commitment, CommitmentJuror, CommitmentStatus
 from app.models.vote import Vote, VoteChoice
 from app.schemas import VoteCreate, VoteResponse
 from app.services.jury_resolution import resolve_commitment
+from app.services.verdict_history import record_snapshot
 
 router = APIRouter(prefix="/commitments", tags=["votes"])
 
@@ -77,6 +78,9 @@ async def cast_vote(
         reason=req.reason,
     )
     db.add(vote)
+    await db.flush()
+    # Stage 2: snapshot the tally after every vote for the history chart.
+    await record_snapshot(db, commitment_id, event_label="Juror vote cast", event_type="vote")
     await db.commit()
     await db.refresh(vote)
 
